@@ -1,8 +1,9 @@
 node_modules/
-build/
+.env
+.env.local
+.env.*.local
 dist/
-coverage/
-.DS_Store
+build/
 *.log
-.env*
-
+.DS_Store
+.vscode/
