@@ -321,12 +321,18 @@ app.post('/api/reset-data', (req, res) => {
 
 // Vite Middleware & Static Serving Setup
 async function startServer() {
+<<<<<<< HEAD
   const PORT = process.env.PORT || 0;
+=======
+  const initialPort = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+>>>>>>> 817daab (Initial commit to PulseFlow)
 
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true, hmr: process.env.DISABLE_HMR !== 'true' },
+      server: { 
+        middlewareMode: true, 
+      },
       appType: 'spa',
       root: path.resolve(__dirname, '../../client'),
     });
@@ -338,11 +344,32 @@ async function startServer() {
     });
   }
 
+<<<<<<< HEAD
   server.listen(PORT, '0.0.0.0', () => {
     const actualPort = server.address().port;
     console.log(`PulseFlow Hospital Server running on port ${actualPort}`);
     console.log(`🌐 Application URL: http://localhost:${actualPort}`);
   });
+=======
+  const startWithRetry = (port) => {
+    server.listen(port, '0.0.0.0')
+      .once('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+          console.log(`Port ${port} is in use, trying port ${port + 1}...`);
+          startWithRetry(port + 1);
+        } else {
+          console.error('Server error:', err);
+        }
+      })
+      .once('listening', () => {
+        const actualPort = server.address().port;
+        console.log(`\n🚀 PulseFlow Hospital Server successfully running!`);
+        console.log(`🌐 Local URL: http://localhost:${actualPort}\n`);
+      });
+  };
+
+  startWithRetry(initialPort);
+>>>>>>> 817daab (Initial commit to PulseFlow)
 }
 
 startServer();
