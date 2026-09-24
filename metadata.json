@@ -1,0 +1,6 @@
+{
+  "name": "PulseFlow - Hospital Queue & Wait Time Intelligence",
+  "description": "HIPAA-compliant real-time hospital queue prediction system with live Socket.io updates, triage tracking, clinical override controls, and administrator throughput analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
