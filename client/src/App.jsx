@@ -229,7 +229,7 @@ export default function App() {
             <span>PulseFlow Clinical Systems © 2026. St. Jude Health Network. HIPAA Security Rule Compliant.</span>
           </div>
           <div className="flex items-center gap-4 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-            <span>WebSocket Live Port: 3000</span>
+            <span>WebSocket Live</span>
             <span>•</span>
             <span>ESI Acuity 1-5 Predictive Pipeline</span>
             <span>•</span>

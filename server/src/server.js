@@ -321,7 +321,7 @@ app.post('/api/reset-data', (req, res) => {
 
 // Vite Middleware & Static Serving Setup
 async function startServer() {
-  const PORT = process.env.PORT || 3000;
+  const PORT = process.env.PORT || 0;
 
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
@@ -339,7 +339,9 @@ async function startServer() {
   }
 
   server.listen(PORT, '0.0.0.0', () => {
-    console.log(`PulseFlow Hospital Server running on port ${PORT}`);
+    const actualPort = server.address().port;
+    console.log(`PulseFlow Hospital Server running on port ${actualPort}`);
+    console.log(`🌐 Application URL: http://localhost:${actualPort}`);
   });
 }
 
