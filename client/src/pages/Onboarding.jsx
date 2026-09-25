@@ -4,7 +4,7 @@ import { AuthLayout } from '../components/AuthLayout.jsx';
 import { Button, Input, Select, Alert } from '../components/ui.jsx';
 import { Stepper, RoleCard } from '../components/Cards.jsx';
 import { registerUser } from '../services/api.js';
-import { User, Building, HeartPulse, ShieldCheck, ArrowRight, Activity, Clock, Zap } from 'lucide-react';
+import { User, Building, HeartPulse, ShieldCheck, ArrowRight, Activity, Clock, Zap, Stethoscope } from 'lucide-react';
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -60,6 +60,26 @@ export default function Onboarding() {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+  };
+
+  const calculatePasswordStrength = (pwd) => {
+    if (!pwd) return 0;
+    let strength = 1;
+    if (pwd.length >= 8) strength++;
+    if (pwd.length >= 12) strength++;
+    if (/[A-Z]/.test(pwd) && (/[0-9]/.test(pwd) || /[^A-Za-z0-9]/.test(pwd))) strength++;
+    return Math.min(4, Math.max(1, strength));
+  };
+
+  const pwdStrength = calculatePasswordStrength(formData.password);
+
+  const getStrengthColor = (isActive) => {
+    if (!isActive) return 'bg-slate-200 dark:bg-slate-700';
+    if (pwdStrength === 1) return 'bg-rose-500';
+    if (pwdStrength === 2) return 'bg-orange-500';
+    if (pwdStrength === 3) return 'bg-amber-500';
+    if (pwdStrength === 4) return 'bg-emerald-500';
+    return 'bg-slate-200 dark:bg-slate-700';
   };
 
   const rightPanel = (
@@ -198,8 +218,15 @@ export default function Onboarding() {
               </div>
               <Input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="Minimum 12 characters" />
               <div className="flex items-center justify-between mt-2 text-xs">
-                <div className="flex gap-1"><div className="w-8 h-1.5 bg-rose-500 rounded-full"></div><div className="w-8 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full"></div><div className="w-8 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full"></div><div className="w-8 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full"></div></div>
-                <span className="text-slate-500">Min. 12 characters, uppercase & special symbol</span>
+                <div className="flex gap-1">
+                  <div className={`w-8 h-1.5 rounded-full transition-colors duration-300 ${getStrengthColor(pwdStrength >= 1)}`}></div>
+                  <div className={`w-8 h-1.5 rounded-full transition-colors duration-300 ${getStrengthColor(pwdStrength >= 2)}`}></div>
+                  <div className={`w-8 h-1.5 rounded-full transition-colors duration-300 ${getStrengthColor(pwdStrength >= 3)}`}></div>
+                  <div className={`w-8 h-1.5 rounded-full transition-colors duration-300 ${getStrengthColor(pwdStrength >= 4)}`}></div>
+                </div>
+                <span className={`transition-colors duration-300 ${pwdStrength === 4 ? 'text-emerald-600 font-bold' : 'text-slate-500'}`}>
+                  {pwdStrength === 4 ? 'Strong Password ✓' : 'Min. 12 characters, uppercase & special symbol'}
+                </span>
               </div>
             </div>
 

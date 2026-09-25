@@ -170,9 +170,14 @@ export default function Login() {
               <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Remember clinical workstation (8-hr shift lock)</span>
             </label>
 
-            <Button type="submit" className="w-full text-base py-3 mt-2" isLoading={isLoading}>
-              <ArrowRight className="w-4 h-4 mr-2" /> Sign In to Operational Dashboard
-            </Button>
+            <div className="flex gap-3 mt-2">
+              <Button type="button" variant="outline" className="w-1/3 py-3" onClick={() => navigate('/onboarding')}>
+                Sign Up
+              </Button>
+              <Button type="submit" className="w-2/3 text-base py-3" isLoading={isLoading}>
+                <ArrowRight className="w-4 h-4 mr-2" /> Sign In
+              </Button>
+            </div>
           </form>
 
           <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">

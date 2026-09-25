@@ -6,7 +6,7 @@ PulseFlow is designed to optimize emergency department workflows and triage accu
 
 1. **Rapid Patient Intake & Triage**
    - **Feature**: Clinical staff can check-in patients quickly, recording vital signs and chief complaints.
-   - **AI Integration**: Powered by the **Gemini 2.5 Flash API**, triage nurses can request an AI-generated Emergency Severity Index (ESI) prediction (1-5) based on the patient's vitals and symptoms, complete with clinical rationale.
+   - **AI Integration**: Powered by the **Groq API**, triage nurses can request an AI-generated Emergency Severity Index (ESI) prediction (1-5) based on the patient's vitals and symptoms, complete with clinical rationale.
    
 2. **Real-time Queue & Bed Management**
    - **Feature**: The live queue automatically recalculates wait times across different departments based on patient acuity, available providers, and bed saturation.
@@ -40,8 +40,16 @@ The application implements a strict zero-trust authentication barrier:
 The project is structured into a streamlined Monorepo for rapid development:
 - **Frontend**: React.js (via Vite) configured as an SPA, styled with TailwindCSS, utilizing Lucide React for iconography, and **React Router v6** for complex page navigation and route guarding.
 - **Backend**: A robust Node.js/Express.js server handling REST APIs, Socket.io for real-time WebSockets, and secure session management via **jsonwebtoken** (JWT).
-- **Database**: In-Memory JavaScript Objects / Maps (`db.js`) seeded dynamically on startup. It acts as a lightweight mock database for immediate demo purposes without external dependencies, but is architected with clear repositories to be easily swapped with MongoDB or PostgreSQL.
-- **AI Integration**: Groq API (or Google Gemini API) for LLM-based intelligent triage predictions and clinical justifications.
+- **Database**: Fully persistent **MongoDB** database using **Mongoose** schemas (`db-mongo.js`). The entire application is architected around asynchronous, non-blocking I/O, seamlessly querying actual MongoDB collections for scaling.
+- **AI Integration**: **Groq API** (`groq-sdk`) for lightning-fast LLM-based intelligent triage predictions and clinical justifications.
+
+## 🔑 Demo Credentials
+
+To test the application, you can use the following pre-seeded demo accounts (any password will work):
+- **Admin**: `admin@mediqueue.com` (Full Access & Priority Overrides)
+- **Staff**: `staff@mediqueue.com` (Clinical Dashboard)
+- **Patient**: `patient@mediqueue.com` (Public View)
+- **New Account**: You can also click the "Register for access" link on the login page to create a brand new account and test the full onboarding flow!
 
 ## 🚀 Getting Started
 
@@ -57,11 +65,12 @@ The project is structured into a streamlined Monorepo for rapid development:
    ```
 
 2. **Environment Variables**
-   Create a `.env` file in the root directory (you can copy `.env.example` if it exists) and add your API key:
+   Create a `.env` file in the root directory and add your configurations. If you do not provide a MongoDB URI, the application will default to connecting to a local MongoDB instance.
    ```env
-   GEMINI_API_KEY=your_actual_gemini_api_key_here
+   GROQ_API_KEY=your_actual_groq_api_key_here
+   MONGODB_URI=mongodb://127.0.0.1:27017/pulseflow
+   JWT_SECRET=your_secure_jwt_secret
    ```
-   *(Note: If the key is missing, the AI features will fall back gracefully without crashing the server).*
 
 3. **Run the Development Server**
    ```bash
