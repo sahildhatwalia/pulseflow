@@ -3,8 +3,13 @@ import http from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { db } from './db.js';
+import { db } from './db-mongo.js';
 import { sanitizePatientForPublic } from './hipaa.js';
+import { authMiddleware, roleMiddleware, generateToken } from './auth.js';
+import { predictTriageLevel } from './ai.js';
+import dotenv from 'dotenv';
+
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,126 +30,148 @@ const io = new SocketIOServer(server, {
 app.use(express.json());
 
 // Socket.io Real-Time Event Hub
-io.on('connection', (socket) => {
-  const departments = db.getDepartments();
-  const rawPatients = db.getAllPatients();
+io.on('connection', async (socket) => {
+  try {
+    const departments = await db.getDepartments();
+    const rawPatients = await db.getAllPatients();
 
-  socket.emit('queue:sync', {
-    departments,
-    patients: rawPatients,
-    timestamp: new Date().toISOString(),
-  });
+    socket.emit('queue:sync', {
+      departments,
+      patients: rawPatients,
+      timestamp: new Date().toISOString(),
+    });
 
-  socket.on('join:room', (roomName) => {
-    socket.join(roomName);
-  });
+    socket.on('join:room', (roomName) => {
+      socket.join(roomName);
+    });
+  } catch (err) {
+    console.error('Socket connection error:', err);
+  }
 });
 
 /**
  * Broadcast updated queue, wait times, and departments to all connected Socket.io clients
  */
-export function broadcastQueueUpdate(eventPayload) {
-  const departments = db.getDepartments();
-  const patients = db.getAllPatients();
-  const auditLogs = db.getAuditLogs();
+export async function broadcastQueueUpdate(eventPayload) {
+  try {
+    const departments = await db.getDepartments();
+    const patients = await db.getAllPatients();
+    const auditLogs = await db.getAuditLogs();
 
-  io.emit('queue:updated', {
-    departments,
-    patients,
-    timestamp: new Date().toISOString(),
-    event: eventPayload,
-  });
+    io.emit('queue:updated', {
+      departments,
+      patients,
+      timestamp: new Date().toISOString(),
+      event: eventPayload,
+    });
 
-  io.emit('wait_times:recalculated', {
-    departments,
-    timestamp: new Date().toISOString(),
-  });
+    io.emit('wait_times:recalculated', {
+      departments,
+      timestamp: new Date().toISOString(),
+    });
 
-  io.emit('audit:logged', {
-    logs: auditLogs.slice(0, 50),
-  });
+    io.emit('audit:logged', {
+      logs: auditLogs.slice(0, 50),
+    });
 
-  if (eventPayload && eventPayload.eventType === 'patient:called') {
-    io.emit('patient:called', eventPayload);
-  }
+    if (eventPayload && eventPayload.eventType === 'patient:called') {
+      io.emit('patient:called', eventPayload);
+    }
 
-  if (eventPayload && eventPayload.eventType === 'priority:overridden') {
-    io.emit('priority:overridden', eventPayload);
+    if (eventPayload && eventPayload.eventType === 'priority:overridden') {
+      io.emit('priority:overridden', eventPayload);
+    }
+  } catch (err) {
+    console.error('Broadcast error:', err);
   }
 }
 
 // REST API Endpoints
 
 // 1. Departments
-app.get('/api/departments', (req, res) => {
-  res.json({ success: true, data: db.getDepartments() });
+app.get('/api/departments', authMiddleware, async (req, res) => {
+  try {
+    const data = await db.getDepartments();
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
-app.patch('/api/departments/:id', (req, res) => {
-  const { id } = req.params;
-  const user = req.body.user || { id: 'admin-01', name: 'Clinical Administrator', role: 'Administrator' };
-  const updated = db.updateDepartment(id, req.body.updates, user);
+app.patch('/api/departments/:id', authMiddleware, roleMiddleware(['Administrator', 'Clinical Supervisor']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = req.user;
+    const updated = await db.updateDepartment(id, req.body.updates, user);
 
-  if (!updated) {
-    res.status(404).json({ success: false, error: 'Department not found' });
-    return;
+    if (!updated) {
+      res.status(404).json({ success: false, error: 'Department not found' });
+      return;
+    }
+
+    broadcastQueueUpdate({
+      eventType: 'department:updated',
+      message: `Department ${updated.name} settings updated`,
+    });
+
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
-
-  broadcastQueueUpdate({
-    eventType: 'department:updated',
-    message: `Department ${updated.name} settings updated`,
-  });
-
-  res.json({ success: true, data: updated });
 });
 
 // 2. Queue & Patients
-app.get('/api/queue', (req, res) => {
-  const role = req.query.role || 'staff';
-  const departmentId = req.query.departmentId;
-  let patients = db.getAllPatients();
+app.get('/api/queue', authMiddleware, async (req, res) => {
+  try {
+    const role = req.query.role || 'staff';
+    const departmentId = req.query.departmentId;
+    let patients = await db.getAllPatients();
 
-  if (departmentId) {
-    patients = patients.filter(p => p.departmentId === departmentId);
+    if (departmentId) {
+      patients = patients.filter(p => p.departmentId === departmentId);
+    }
+
+    if (role === 'public') {
+      const publicPatients = patients.map(sanitizePatientForPublic);
+      res.json({ success: true, data: publicPatients, isDeIdentified: true });
+      return;
+    }
+
+    res.json({ success: true, data: patients, isDeIdentified: false });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
-
-  if (role === 'public') {
-    const publicPatients = patients.map(sanitizePatientForPublic);
-    res.json({ success: true, data: publicPatients, isDeIdentified: true });
-    return;
-  }
-
-  res.json({ success: true, data: patients, isDeIdentified: false });
 });
 
 // Patient Self-Lookup by Token
-app.get('/api/patient/:token', (req, res) => {
-  const { token } = req.params;
-  const patient = db.getPatientByToken(token);
+app.get('/api/patient/:token', authMiddleware, async (req, res) => {
+  try {
+    const { token } = req.params;
+    const patient = await db.getPatientByToken(token);
 
-  if (!patient) {
-    res.status(404).json({ success: false, error: 'Patient ticket not found' });
-    return;
+    if (!patient) {
+      res.status(404).json({ success: false, error: 'Patient ticket not found' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: {
+        ...sanitizePatientForPublic(patient),
+        chiefComplaint: patient.chiefComplaint,
+        arrivalTime: patient.arrivalTime,
+        triageTime: patient.triageTime,
+        treatmentStartTime: patient.treatmentStartTime,
+        assignedRoomName: patient.assignedRoomName,
+        assignedProviderName: patient.assignedProviderName,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
-
-  res.json({
-    success: true,
-    data: {
-      ...sanitizePatientForPublic(patient),
-      chiefComplaint: patient.chiefComplaint,
-      arrivalTime: patient.arrivalTime,
-      triageTime: patient.triageTime,
-      treatmentStartTime: patient.treatmentStartTime,
-      assignedRoomName: patient.assignedRoomName,
-      assignedProviderName: patient.assignedProviderName,
-    },
-  });
 });
 
-// Patient Intake Check-In
-import { predictTriageLevel } from './ai.js';
-
-app.post('/api/ai/predict-triage', async (req, res) => {
+app.post('/api/ai/predict-triage', authMiddleware, async (req, res) => {
   try {
     const { chiefComplaint, vitals } = req.body;
     const prediction = await predictTriageLevel(chiefComplaint, vitals);
@@ -154,32 +181,21 @@ app.post('/api/ai/predict-triage', async (req, res) => {
   }
 });
 
-app.post('/api/queue/checkin', (req, res) => {
+app.post('/api/queue/checkin', authMiddleware, async (req, res) => {
   try {
     const {
-      legalFullName,
-      dateOfBirth,
-      departmentId,
-      chiefComplaint,
-      esiLevel,
-      vitals,
-      mrn,
-      phoneNumber,
-      emergencyContact,
-      recordedBy,
+      legalFullName, dateOfBirth, departmentId, chiefComplaint,
+      esiLevel, vitals, mrn, phoneNumber, emergencyContact,
     } = req.body;
 
-    const patient = db.checkInPatient({
+    const patient = await db.checkInPatient({
       legalFullName: legalFullName || 'Patient',
       dateOfBirth: dateOfBirth || '1990-01-01',
       departmentId: departmentId || 'dept-ed',
       chiefComplaint: chiefComplaint || 'General acute consultation',
       esiLevel: esiLevel ? Number(esiLevel) : 3,
-      vitals,
-      mrn,
-      phoneNumber,
-      emergencyContact,
-      recordedBy: recordedBy || { id: 'nurse-kiosk', name: 'Triage Intake Station', role: 'Nurse' },
+      vitals, mrn, phoneNumber, emergencyContact,
+      recordedBy: req.user,
     });
 
     broadcastQueueUpdate({
@@ -195,144 +211,229 @@ app.post('/api/queue/checkin', (req, res) => {
 });
 
 // Update Patient Status
-app.patch('/api/queue/:id/status', (req, res) => {
-  const { id } = req.params;
-  const { status, assignedRoomId, assignedProviderId, vitals, esiLevel, user } = req.body;
+app.patch('/api/queue/:id/status', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, assignedRoomId, assignedProviderId, vitals, esiLevel } = req.body;
 
-  const updated = db.updatePatientStatus(id, status, {
-    assignedRoomId,
-    assignedProviderId,
-    vitals,
-    esiLevel,
-    user: user || { id: 'staff-station', name: 'Staff Station', role: 'Nurse' },
-  });
+    const updated = await db.updatePatientStatus(id, status, {
+      assignedRoomId, assignedProviderId, vitals, esiLevel,
+      user: req.user,
+    });
 
-  if (!updated) {
-    res.status(404).json({ success: false, error: 'Patient not found' });
-    return;
+    if (!updated) {
+      res.status(404).json({ success: false, error: 'Patient not found' });
+      return;
+    }
+
+    const isCalling = status === 'in_treatment' || assignedRoomId;
+
+    broadcastQueueUpdate({
+      eventType: isCalling ? 'patient:called' : 'patient:status_change',
+      patientToken: updated.displayToken,
+      roomName: updated.assignedRoomName,
+      message: isCalling 
+        ? `Patient ${updated.displayToken} called to ${updated.assignedRoomName || 'Exam Room'}`
+        : `Patient ${updated.displayToken} status updated to ${status}`,
+    });
+
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
-
-  const isCalling = status === 'in_treatment' || assignedRoomId;
-
-  broadcastQueueUpdate({
-    eventType: isCalling ? 'patient:called' : 'patient:status_change',
-    patientToken: updated.displayToken,
-    roomName: updated.assignedRoomName,
-    message: isCalling 
-      ? `Patient ${updated.displayToken} called to ${updated.assignedRoomName || 'Exam Room'}`
-      : `Patient ${updated.displayToken} status updated to ${status}`,
-  });
-
-  res.json({ success: true, data: updated });
 });
 
 // Admin Manual Priority Override (CRITICAL REQUIREMENT)
-app.post('/api/queue/:id/override-priority', (req, res) => {
-  const { id } = req.params;
-  const { overrideScore, overrideEsi, reason, justificationCategory, user } = req.body;
+app.post('/api/queue/:id/override-priority', authMiddleware, roleMiddleware(['Administrator', 'Clinical Supervisor', 'Charge Nurse']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { overrideScore, overrideEsi, reason, justificationCategory } = req.body;
 
-  if (!reason || !justificationCategory) {
-    res.status(400).json({
-      success: false,
-      error: 'Clinical justification category and explanatory reason are strictly mandatory under HIPAA regulations.',
+    if (!reason || !justificationCategory) {
+      res.status(400).json({
+        success: false,
+        error: 'Clinical justification category and explanatory reason are strictly mandatory under HIPAA regulations.',
+      });
+      return;
+    }
+
+    const updated = await db.overridePriority(id, {
+      overrideScore: overrideScore !== undefined ? Number(overrideScore) : undefined,
+      overrideEsi: overrideEsi !== undefined ? Number(overrideEsi) : undefined,
+      reason, justificationCategory,
+      user: req.user,
     });
-    return;
+
+    if (!updated) {
+      res.status(404).json({ success: false, error: 'Patient not found' });
+      return;
+    }
+
+    broadcastQueueUpdate({
+      eventType: 'priority:overridden',
+      patientToken: updated.displayToken,
+      message: `Manual Priority Override applied to ${updated.displayToken}: ${justificationCategory}`,
+    });
+
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
-
-  const updated = db.overridePriority(id, {
-    overrideScore: overrideScore !== undefined ? Number(overrideScore) : undefined,
-    overrideEsi: overrideEsi !== undefined ? Number(overrideEsi) : undefined,
-    reason,
-    justificationCategory,
-    user: user || { id: 'admin-01', name: 'Clinical Supervisor', role: 'Administrator' },
-  });
-
-  if (!updated) {
-    res.status(404).json({ success: false, error: 'Patient not found' });
-    return;
-  }
-
-  broadcastQueueUpdate({
-    eventType: 'priority:overridden',
-    patientToken: updated.displayToken,
-    message: `Manual Priority Override applied to ${updated.displayToken}: ${justificationCategory}`,
-  });
-
-  res.json({ success: true, data: updated });
 });
 
 // Providers & Rooms
-app.get('/api/providers', (req, res) => {
-  res.json({ success: true, data: db.getProviders() });
+app.get('/api/providers', authMiddleware, async (req, res) => {
+  try {
+    const data = await db.getProviders();
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
-app.get('/api/rooms', (req, res) => {
-  res.json({ success: true, data: db.getRooms() });
+app.get('/api/rooms', authMiddleware, async (req, res) => {
+  try {
+    const data = await db.getRooms();
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // Analytics
-app.get('/api/analytics', (req, res) => {
-  res.json({ success: true, data: db.getAnalytics() });
+app.get('/api/analytics', authMiddleware, async (req, res) => {
+  try {
+    const data = await db.getAnalytics();
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Auth & Registration
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    // 1. Check Staff
+    const providers = await db.getProviders();
+    let user = providers.find(p => p.email === email || p.id === email);
+    
+    // 2. Check Patients
+    if (!user) {
+      const patients = await db.getAllPatients();
+      const patient = patients.find(p => p.phi?.email === email || p.displayToken === email);
+      if (patient) {
+        user = {
+          id: patient.id,
+          name: patient.phi?.legalFullName || patient.displayToken,
+          role: 'Patient',
+          email: email
+        };
+      }
+    }
+    
+    // Fallback for demo convenience
+    if (!user && (email === 'admin' || email.includes('admin'))) {
+      user = providers.find(p => p.role === 'Administrator') || providers[0];
+    }
+    
+    if (user) {
+      const token = generateToken(user);
+      res.json({ success: true, data: { user: user, token } });
+    } else {
+      res.status(401).json({ success: false, error: 'Invalid credentials.' });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { firstName, lastName, email, npi, department, facility, password, role } = req.body;
+    
+    const newProvider = await db.registerProvider({
+      name: `${firstName} ${lastName}`, email, npi,
+      departmentId: department, facility,
+      role: role === 'clinical' ? 'Clinical Provider' : 'Hospital Operations',
+    });
+    
+    const token = generateToken(newProvider);
+    res.json({ success: true, data: { user: newProvider, token } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // Audit Logs
-app.get('/api/audit-logs', (req, res) => {
-  res.json({ success: true, data: db.getAuditLogs() });
+app.get('/api/audit-logs', authMiddleware, async (req, res) => {
+  try {
+    const data = await db.getAuditLogs();
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // Simulate Live Arrival / Surge Trigger
-app.post('/api/simulate-arrival', (req, res) => {
-  const { type, departmentId } = req.body;
-  const deptId = departmentId || 'dept-ed';
+app.post('/api/simulate-arrival', authMiddleware, async (req, res) => {
+  try {
+    const { type, departmentId } = req.body;
+    const deptId = departmentId || 'dept-ed';
 
-  const isAmbulance = type === 'ambulance';
-  const displayToken = db.checkInPatient({
-    legalFullName: isAmbulance ? 'EMS Trauma Arrival' : 'Walk-in Emergent Patient',
-    dateOfBirth: '1985-05-15',
-    departmentId: deptId,
-    chiefComplaint: isAmbulance
-      ? 'Direct Inbound EMS: Suspected acute ST-elevation myocardial infarction with diaphoresis'
-      : 'Acute sudden severe headache (10/10 worst of life), photophobia, elevated BP',
-    esiLevel: isAmbulance ? 1 : 2,
-    vitals: isAmbulance
-      ? { heartRate: 118, bloodPressureSystolic: 172, bloodPressureDiastolic: 104, oxygenSaturation: 93, respiratoryRate: 24, temperature: 98.8, painScore: 9 }
-      : { heartRate: 98, bloodPressureSystolic: 168, bloodPressureDiastolic: 102, oxygenSaturation: 97, respiratoryRate: 18, temperature: 99.2, painScore: 10 },
-    recordedBy: { id: 'ems-intake', name: 'Rapid Triage Intake', role: 'Nurse' },
-  });
+    const isAmbulance = type === 'ambulance';
+    const displayToken = await db.checkInPatient({
+      legalFullName: isAmbulance ? 'EMS Trauma Arrival' : 'Walk-in Emergent Patient',
+      dateOfBirth: '1985-05-15',
+      departmentId: deptId,
+      chiefComplaint: isAmbulance
+        ? 'Direct Inbound EMS: Suspected acute ST-elevation myocardial infarction with diaphoresis'
+        : 'Acute sudden severe headache (10/10 worst of life), photophobia, elevated BP',
+      esiLevel: isAmbulance ? 1 : 2,
+      vitals: isAmbulance
+        ? { heartRate: 118, bloodPressureSystolic: 172, bloodPressureDiastolic: 104, oxygenSaturation: 93, respiratoryRate: 24, temperature: 98.8, painScore: 9 }
+        : { heartRate: 98, bloodPressureSystolic: 168, bloodPressureDiastolic: 102, oxygenSaturation: 97, respiratoryRate: 18, temperature: 99.2, painScore: 10 },
+      recordedBy: req.user,
+    });
 
-  broadcastQueueUpdate({
-    eventType: 'patient:checkin',
-    patientToken: displayToken.displayToken,
-    message: `${isAmbulance ? '🚨 AMBULANCE INBOUND' : '⚡ Urgent Patient'} arrived: ${displayToken.displayToken} (ESI ${displayToken.esiLevel})`,
-  });
+    broadcastQueueUpdate({
+      eventType: 'patient:checkin',
+      patientToken: displayToken.displayToken,
+      message: `${isAmbulance ? '🚨 AMBULANCE' : '⚡ Urgent'} arrived: ${displayToken.displayToken} (ESI ${displayToken.esiLevel})`,
+    });
 
-  res.json({ success: true, data: displayToken });
+    res.json({ success: true, data: displayToken });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // Reset seed data
-app.post('/api/reset-data', (req, res) => {
-  db.seedInitialData();
-  broadcastQueueUpdate({
-    eventType: 'system:reset',
-    message: 'System queue and departments reset to initial state',
-  });
-  res.json({ success: true, message: 'Database reset to initial seed' });
+app.post('/api/reset-data', authMiddleware, async (req, res) => {
+  try {
+    await db.seedInitialData();
+    broadcastQueueUpdate({
+      eventType: 'system:reset',
+      message: 'System queue and departments reset to initial state',
+    });
+    res.json({ success: true, message: 'Database reset to initial seed' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // Vite Middleware & Static Serving Setup
 async function startServer() {
-<<<<<<< HEAD
-  const PORT = process.env.PORT || 0;
-=======
   const initialPort = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
->>>>>>> 817daab (Initial commit to PulseFlow)
+
+  // Connect to MongoDB Database!
+  await db.connect();
 
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { 
-        middlewareMode: true, 
-      },
+      server: { middlewareMode: true },
       appType: 'spa',
       root: path.resolve(__dirname, '../../client'),
     });
@@ -344,13 +445,6 @@ async function startServer() {
     });
   }
 
-<<<<<<< HEAD
-  server.listen(PORT, '0.0.0.0', () => {
-    const actualPort = server.address().port;
-    console.log(`PulseFlow Hospital Server running on port ${actualPort}`);
-    console.log(`🌐 Application URL: http://localhost:${actualPort}`);
-  });
-=======
   const startWithRetry = (port) => {
     server.listen(port, '0.0.0.0')
       .once('error', (err) => {
@@ -369,7 +463,6 @@ async function startServer() {
   };
 
   startWithRetry(initialPort);
->>>>>>> 817daab (Initial commit to PulseFlow)
 }
 
 startServer();

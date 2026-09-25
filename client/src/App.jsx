@@ -5,6 +5,10 @@ import { PatientDisplayView } from './components/PatientDisplayView.jsx';
 import { StaffTriageView } from './components/StaffTriageView.jsx';
 import { AdminOverrideView } from './components/AdminOverrideView.jsx';
 import { AnalyticsView } from './components/AnalyticsView.jsx';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/Login.jsx';
+import Onboarding from './pages/Onboarding.jsx';
+import { ProtectedRoute } from './components/ProtectedRoute.jsx';
 import { HipaaComplianceView } from './components/HipaaComplianceView.jsx';
 import { getSocket } from './services/socket.js';
 import { 
@@ -20,7 +24,7 @@ import {
   resetDatabase
 } from './services/api.js';
 
-export default function App() {
+function Dashboard() {
   const [activeTab, setActiveTab] = useState('patient');
   const [departments, setDepartments] = useState([]);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState('dept-ed');
@@ -238,5 +242,21 @@ export default function App() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/onboarding" element={<Onboarding />} />
+      <Route path="/onboarding/verify" element={<Onboarding />} />
+      <Route path="/onboarding/facility" element={<Onboarding />} />
+      <Route path="/*" element={
+        <ProtectedRoute>
+          <Dashboard />
+        </ProtectedRoute>
+      } />
+    </Routes>
   );
 }

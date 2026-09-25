@@ -1,6 +1,4 @@
-<<<<<<< HEAD
-# pulseflow
-=======
+# PulseFlow
 
 ## ✨ Features & Usecases
 
@@ -26,17 +24,30 @@ PulseFlow is designed to optimize emergency department workflows and triage accu
 6. **Throughput Analytics**
    - **Feature**: Integrated analytics dashboard tracking metrics like Door-to-Doctor time, LWBS (Left Without Being Seen) rate, bed turnover, and hourly surge data.
 
-## 🏗️ Architecture
+7. **Secure Clinical Authentication**
+   - **Feature**: JWT-based session management with role-based access control (RBAC). Protected frontend routes and robust backend API middleware to enforce compliance and restrict sensitive actions (e.g., priority overrides) to authorized personnel only.
+   - **Onboarding Flow**: Multi-step clinical registration guiding staff through role selection, identity verification, and facility assignment.
+
+## 🔐 Authentication Workflow
+
+The application implements a strict zero-trust authentication barrier:
+- **Public Routes**: `/login`, `/onboarding` and its sub-routes are publicly accessible.
+- **Protected Routes**: The entire operational dashboard (`/dashboard`, `/queue`, `/patients`, etc.) is hidden behind a React `ProtectedRoute` guard. Unauthenticated visitors are automatically redirected to `/login`, preserving their intended destination for post-login redirection.
+- **Backend API Protection**: All clinical and administrative endpoints are guarded by `authMiddleware` enforcing valid Bearer tokens. High-risk actions (e.g., overriding patient priority) use `roleMiddleware` to verify the actor is an Administrator or Clinical Supervisor. 401 Unauthorized responses trigger automatic frontend session purging.
+
+## 🏗️ Tech Stack
 
 The project is structured into a streamlined Monorepo for rapid development:
-- **/client**: A React SPA built with Vite, styled with TailwindCSS, utilizing Lucide React for iconography.
-- **/server**: A robust Node.js/Express backend handling REST APIs, Socket.io real-time events, and Google GenAI prompt orchestration.
+- **Frontend**: React.js (via Vite) configured as an SPA, styled with TailwindCSS, utilizing Lucide React for iconography, and **React Router v6** for complex page navigation and route guarding.
+- **Backend**: A robust Node.js/Express.js server handling REST APIs, Socket.io for real-time WebSockets, and secure session management via **jsonwebtoken** (JWT).
+- **Database**: In-Memory JavaScript Objects / Maps (`db.js`) seeded dynamically on startup. It acts as a lightweight mock database for immediate demo purposes without external dependencies, but is architected with clear repositories to be easily swapped with MongoDB or PostgreSQL.
+- **AI Integration**: Groq API (or Google Gemini API) for LLM-based intelligent triage predictions and clinical justifications.
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 - Node.js (v18 or higher recommended)
-- A Google Gemini API Key
+- A groq api
 
 ### Installation
 
@@ -70,4 +81,3 @@ This builds the React application into the `client/dist` directory, which the Ex
 ```bash
 NODE_ENV=production npm run start
 ```
->>>>>>> 817daab (Initial commit to PulseFlow)

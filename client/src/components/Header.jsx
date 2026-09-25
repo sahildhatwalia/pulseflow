@@ -11,8 +11,11 @@ import {
   UserPlus, 
   RotateCcw,
   Sun,
-  Moon
+  Moon,
+  LogOut,
+  User as UserIcon
 } from 'lucide-react';
+import { logoutUser } from '../services/api.js';
 
 export function Header({
   activeTab,
@@ -29,6 +32,12 @@ export function Header({
 }) {
   const currentDept = departments.find(d => d.id === selectedDepartmentId);
   const isDark = theme === 'dark';
+  
+  let user = null;
+  try {
+    const userStr = localStorage.getItem('pulseflow_user');
+    if (userStr) user = JSON.parse(userStr);
+  } catch (e) {}
 
   return (
     <header className="border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur sticky top-0 z-40 transition-colors shadow-sm dark:shadow-none">
@@ -50,7 +59,7 @@ export function Header({
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 ml-auto">
           {/* Theme Toggle Button */}
           <button
             onClick={onToggleTheme}
@@ -69,6 +78,22 @@ export function Header({
               </>
             )}
           </button>
+
+          {/* User Profile & Logout */}
+          <div className="flex items-center gap-2 pl-2 border-l border-slate-300 dark:border-slate-700">
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300">
+              <UserIcon className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">{user?.name || 'Staff'}</span>
+            </div>
+            <button
+              onClick={logoutUser}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white border border-slate-200 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-rose-900/30 dark:hover:border-rose-800 dark:text-slate-300 dark:hover:text-rose-400 text-slate-600 text-xs font-semibold transition-all shadow-2xs cursor-pointer"
+              title="Sign Out to switch accounts"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sign Out</span>
+            </button>
+          </div>
 
           {/* Socket.io Live Status */}
           <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${
@@ -92,34 +117,36 @@ export function Header({
             )}
           </div>
 
-          {/* Quick Real-Time Simulator Triggers */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => onSimulate('ambulance')}
-              disabled={simulating}
-              className="flex items-center gap-1 px-2.5 py-1 rounded bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 dark:bg-rose-950/80 dark:hover:bg-rose-900 dark:border-rose-700/60 dark:text-rose-200 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer shadow-2xs"
-              title="Simulate inbound critical ambulance (ESI 1) to test real-time Socket.io push"
-            >
-              <Ambulance className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
-              <span className="hidden sm:inline">+ EMS Ambulance</span>
-            </button>
-            <button
-              onClick={() => onSimulate('walkin')}
-              disabled={simulating}
-              className="flex items-center gap-1 px-2.5 py-1 rounded bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 dark:bg-amber-950/80 dark:hover:bg-amber-900 dark:border-amber-700/60 dark:text-amber-200 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer shadow-2xs"
-              title="Simulate walk-in emergent patient (ESI 2)"
-            >
-              <UserPlus className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-              <span className="hidden sm:inline">+ Walk-in</span>
-            </button>
-            <button
-              onClick={onReset}
-              className="p-1 rounded bg-slate-100 hover:bg-slate-200 border border-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer"
-              title="Reset system to initial seed data"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          {/* Quick Real-Time Simulator Triggers - Hidden for Patients */}
+          {user?.role !== 'Patient' && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => onSimulate('ambulance')}
+                disabled={simulating}
+                className="flex items-center gap-1 px-2.5 py-1 rounded bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 dark:bg-rose-950/80 dark:hover:bg-rose-900 dark:border-rose-700/60 dark:text-rose-200 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer shadow-2xs"
+                title="Simulate inbound critical ambulance (ESI 1) to test real-time Socket.io push"
+              >
+                <Ambulance className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                <span className="hidden sm:inline">+ EMS Ambulance</span>
+              </button>
+              <button
+                onClick={() => onSimulate('walkin')}
+                disabled={simulating}
+                className="flex items-center gap-1 px-2.5 py-1 rounded bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 dark:bg-amber-950/80 dark:hover:bg-amber-900 dark:border-amber-700/60 dark:text-amber-200 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer shadow-2xs"
+                title="Simulate walk-in emergent patient (ESI 2)"
+              >
+                <UserPlus className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                <span className="hidden sm:inline">+ Walk-in</span>
+              </button>
+              <button
+                onClick={onReset}
+                className="p-1 rounded bg-slate-100 hover:bg-slate-200 border border-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                title="Reset system to initial seed data"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -187,53 +214,57 @@ export function Header({
             <span>Patient Display & Kiosk</span>
           </button>
 
-          <button
-            onClick={() => onTabChange('staff')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all cursor-pointer ${
-              activeTab === 'staff'
-                ? 'bg-teal-50 dark:bg-slate-800 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-slate-700/80 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/40'
-            }`}
-          >
-            <Stethoscope className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-            <span>Staff Triage Station</span>
-          </button>
+          {user?.role !== 'Patient' && (
+            <>
+              <button
+                onClick={() => onTabChange('staff')}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all cursor-pointer ${
+                  activeTab === 'staff'
+                    ? 'bg-teal-50 dark:bg-slate-800 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-slate-700/80 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/40'
+                }`}
+              >
+                <Stethoscope className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                <span>Staff Triage Station</span>
+              </button>
 
-          <button
-            onClick={() => onTabChange('admin')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all cursor-pointer ${
-              activeTab === 'admin'
-                ? 'bg-amber-50 dark:bg-slate-800 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-slate-700/80 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/40'
-            }`}
-          >
-            <Sliders className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            <span>Admin Priority Overrides</span>
-          </button>
+              <button
+                onClick={() => onTabChange('admin')}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all cursor-pointer ${
+                  activeTab === 'admin'
+                    ? 'bg-amber-50 dark:bg-slate-800 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-slate-700/80 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/40'
+                }`}
+              >
+                <Sliders className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                <span>Admin Priority Overrides</span>
+              </button>
 
-          <button
-            onClick={() => onTabChange('analytics')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all cursor-pointer ${
-              activeTab === 'analytics'
-                ? 'bg-indigo-50 dark:bg-slate-800 text-indigo-800 dark:text-indigo-300 border border-indigo-200 dark:border-slate-700/80 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/40'
-            }`}
-          >
-            <BarChart3 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-            <span>Hospital Analytics</span>
-          </button>
+              <button
+                onClick={() => onTabChange('analytics')}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all cursor-pointer ${
+                  activeTab === 'analytics'
+                    ? 'bg-indigo-50 dark:bg-slate-800 text-indigo-800 dark:text-indigo-300 border border-indigo-200 dark:border-slate-700/80 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/40'
+                }`}
+              >
+                <BarChart3 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <span>Hospital Analytics</span>
+              </button>
 
-          <button
-            onClick={() => onTabChange('hipaa')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all cursor-pointer ${
-              activeTab === 'hipaa'
-                ? 'bg-emerald-50 dark:bg-slate-800 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-slate-700/80 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/40'
-            }`}
-          >
-            <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span>HIPAA & Audit Logs</span>
-          </button>
+              <button
+                onClick={() => onTabChange('hipaa')}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all cursor-pointer ${
+                  activeTab === 'hipaa'
+                    ? 'bg-emerald-50 dark:bg-slate-800 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-slate-700/80 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/40'
+                }`}
+              >
+                <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span>HIPAA & Audit Logs</span>
+              </button>
+            </>
+          )}
         </nav>
 
         {currentDept && (

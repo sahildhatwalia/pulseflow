@@ -100,7 +100,10 @@ export function StaffTriageView({
     try {
       const response = await fetch('/api/ai/predict-triage', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('pulseflow_token')}`
+        },
         body: JSON.stringify({
           chiefComplaint: intakeForm.chiefComplaint,
           vitals: {

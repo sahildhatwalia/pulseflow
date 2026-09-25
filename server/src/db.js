@@ -86,27 +86,22 @@ class HospitalDatabase {
 
     // 2. Seed Staff / Providers
     const initialProviders = [
-<<<<<<< HEAD
-      { id: 'prov-1', name: 'Dr. Priya Sharma, MD', role: 'Attending Physician', departmentId: 'dept-ed', status: 'on_duty', activePatientsCount: 3, maxPatientsCapacity: 6 },
-      { id: 'prov-2', name: 'Dr. Rahul Verma, MD', role: 'Attending Physician', departmentId: 'dept-ed', status: 'on_duty', activePatientsCount: 4, maxPatientsCapacity: 6 },
-      { id: 'prov-3', name: 'Kavita Singh, RN, BSN', role: 'Triage Nurse', departmentId: 'dept-ed', status: 'on_duty', activePatientsCount: 5, maxPatientsCapacity: 8 },
-      { id: 'prov-4', name: 'Rajesh Kumar, RN', role: 'Charge Nurse', departmentId: 'dept-ed', status: 'on_duty', activePatientsCount: 2, maxPatientsCapacity: 5 },
-      { id: 'prov-5', name: 'Dr. Aisha Patel, DO', role: 'Attending Physician', departmentId: 'dept-uc', status: 'on_duty', activePatientsCount: 3, maxPatientsCapacity: 6 },
-      { id: 'prov-6', name: 'Sanjay Gupta, PA-C', role: 'Physician Assistant', departmentId: 'dept-uc', status: 'on_duty', activePatientsCount: 4, maxPatientsCapacity: 6 },
-      { id: 'prov-7', name: 'Dr. Neha Desai, MD', role: 'Attending Physician', departmentId: 'dept-ped', status: 'on_duty', activePatientsCount: 2, maxPatientsCapacity: 5 },
-      { id: 'prov-8', name: 'Anjali Rao, RN, CPN', role: 'Triage Nurse', departmentId: 'dept-ped', status: 'on_duty', activePatientsCount: 3, maxPatientsCapacity: 7 },
-      { id: 'prov-9', name: 'Dr. Vikram Rathore, FACS', role: 'Attending Physician', departmentId: 'dept-trauma', status: 'on_duty', activePatientsCount: 1, maxPatientsCapacity: 3 },
-=======
-      { id: 'prov-1', name: 'Dr. Ananya Sharma, MD', role: 'Attending Physician', departmentId: 'dept-ed', status: 'on_duty', activePatientsCount: 3, maxPatientsCapacity: 6 },
-      { id: 'prov-2', name: 'Dr. Rohan Desai, MD', role: 'Attending Physician', departmentId: 'dept-ed', status: 'on_duty', activePatientsCount: 4, maxPatientsCapacity: 6 },
-      { id: 'prov-3', name: 'Priya Patel, RN, BSN', role: 'Triage Nurse', departmentId: 'dept-ed', status: 'on_duty', activePatientsCount: 5, maxPatientsCapacity: 8 },
-      { id: 'prov-4', name: 'Vikram Singh, RN', role: 'Charge Nurse', departmentId: 'dept-ed', status: 'on_duty', activePatientsCount: 2, maxPatientsCapacity: 5 },
-      { id: 'prov-5', name: 'Dr. Aisha Patel, DO', role: 'Attending Physician', departmentId: 'dept-uc', status: 'on_duty', activePatientsCount: 3, maxPatientsCapacity: 6 },
-      { id: 'prov-6', name: 'Rahul Verma, PA-C', role: 'Physician Assistant', departmentId: 'dept-uc', status: 'on_duty', activePatientsCount: 4, maxPatientsCapacity: 6 },
-      { id: 'prov-7', name: 'Dr. Neha Gupta, MD', role: 'Attending Physician', departmentId: 'dept-ped', status: 'on_duty', activePatientsCount: 2, maxPatientsCapacity: 5 },
-      { id: 'prov-8', name: 'Riya Kapoor, RN, CPN', role: 'Triage Nurse', departmentId: 'dept-ped', status: 'on_duty', activePatientsCount: 3, maxPatientsCapacity: 7 },
-      { id: 'prov-9', name: 'Dr. Arjun Mehta, FACS', role: 'Attending Physician', departmentId: 'dept-trauma', status: 'on_duty', activePatientsCount: 1, maxPatientsCapacity: 3 },
->>>>>>> 817daab (Initial commit to PulseFlow)
+      {
+        id: 'prov-admin',
+        name: 'Jane Admin',
+        role: 'Administrator',
+        departmentId: 'dept-ed',
+        email: 'admin@mediqueue.com',
+        status: 'on_duty',
+      },
+      {
+        id: 'prov-staff',
+        name: 'John Staff, RN',
+        role: 'Clinical Provider',
+        departmentId: 'dept-ed',
+        email: 'staff@mediqueue.com',
+        status: 'on_duty',
+      }
     ];
     initialProviders.forEach(p => this.providers.set(p.id, p));
 
@@ -144,11 +139,6 @@ class HospitalDatabase {
         triageTime: createTime(36),
         treatmentStartTime: createTime(20),
         assignedProviderId: 'prov-1',
-<<<<<<< HEAD
-        assignedProviderName: 'Dr. Priya Sharma, MD',
-=======
-        assignedProviderName: 'Dr. Ananya Sharma, MD',
->>>>>>> 817daab (Initial commit to PulseFlow)
         assignedRoomId: 'bay-5',
         assignedRoomName: 'Cardiac Bay 05',
         calculatedPriorityScore: 92,
@@ -165,19 +155,8 @@ class HospitalDatabase {
           painScore: 8,
         },
         phi: {
-<<<<<<< HEAD
-          legalFullName: 'Arvind Patel',
-          dateOfBirth: '1962-04-18',
-          mrn: 'MRN-882190',
-          phoneNumber: '+91 98234 8901',
-          emergencyContact: 'Leela Patel (Spouse) - +91 98234 8902',
-=======
-          legalFullName: 'Amitabh Chatterjee',
-          dateOfBirth: '1962-04-18',
-          mrn: 'MRN-882190',
-          phoneNumber: '(555) 234-8901',
-          emergencyContact: 'Jaya Chatterjee (Spouse) - (555) 234-8902',
->>>>>>> 817daab (Initial commit to PulseFlow)
+          email: 'patient@mediqueue.com',
+          legalFullName: 'Demo Patient',
         },
       },
       {
@@ -203,19 +182,6 @@ class HospitalDatabase {
           painScore: 4,
         },
         phi: {
-<<<<<<< HEAD
-          legalFullName: 'Rohan Sharma',
-          dateOfBirth: '1988-11-03',
-          mrn: 'MRN-441209',
-          phoneNumber: '+91 98782 9901',
-          emergencyContact: 'Kavita Sharma (Mother) - +91 98782 9902',
-=======
-          legalFullName: 'Karan Malhotra',
-          dateOfBirth: '1988-11-03',
-          mrn: 'MRN-441209',
-          phoneNumber: '(555) 782-9901',
-          emergencyContact: 'Geeta Malhotra (Mother) - (555) 782-9902',
->>>>>>> 817daab (Initial commit to PulseFlow)
         },
       },
       {
@@ -241,19 +207,6 @@ class HospitalDatabase {
           painScore: 7,
         },
         phi: {
-<<<<<<< HEAD
-          legalFullName: 'Meera Reddy',
-          dateOfBirth: '1995-07-22',
-          mrn: 'MRN-773105',
-          phoneNumber: '+91 98345 1234',
-          emergencyContact: 'Dilip Reddy (Brother) - +91 98345 1235',
-=======
-          legalFullName: 'Aarti Iyer',
-          dateOfBirth: '1995-07-22',
-          mrn: 'MRN-773105',
-          phoneNumber: '(555) 345-1234',
-          emergencyContact: 'Rajesh Iyer (Brother) - (555) 345-1235',
->>>>>>> 817daab (Initial commit to PulseFlow)
         },
       },
       {
@@ -278,19 +231,6 @@ class HospitalDatabase {
           painScore: 3,
         },
         phi: {
-<<<<<<< HEAD
-          legalFullName: 'Karan Mehta',
-          dateOfBirth: '1970-02-14',
-          mrn: 'MRN-229048',
-          phoneNumber: '+91 98901 2384',
-          emergencyContact: 'Sneha Mehta (Wife) - +91 98901 2385',
-=======
-          legalFullName: 'Suresh Kumar',
-          dateOfBirth: '1970-02-14',
-          mrn: 'MRN-229048',
-          phoneNumber: '(555) 901-2384',
-          emergencyContact: 'Sunita Kumar (Wife) - (555) 901-2385',
->>>>>>> 817daab (Initial commit to PulseFlow)
         },
       },
       {
@@ -315,19 +255,6 @@ class HospitalDatabase {
           painScore: 6,
         },
         phi: {
-<<<<<<< HEAD
-          legalFullName: 'Esha Bansal',
-          dateOfBirth: '1954-09-30',
-          mrn: 'MRN-551049',
-          phoneNumber: '+91 98492 0192',
-          emergencyContact: 'Mohan Bansal (Son) - +91 98492 0193',
-=======
-          legalFullName: 'Lakshmi Narayan',
-          dateOfBirth: '1954-09-30',
-          mrn: 'MRN-551049',
-          phoneNumber: '(555) 492-0192',
-          emergencyContact: 'Vivek Narayan (Son) - (555) 492-0193',
->>>>>>> 817daab (Initial commit to PulseFlow)
         },
       },
       {
@@ -352,19 +279,6 @@ class HospitalDatabase {
           painScore: 5,
         },
         phi: {
-<<<<<<< HEAD
-          legalFullName: 'Tarun Joshi',
-          dateOfBirth: '1998-05-12',
-          mrn: 'MRN-338291',
-          phoneNumber: '+91 98819 2031',
-          emergencyContact: 'Jaya Joshi (Sister) - +91 98819 2032',
-=======
-          legalFullName: 'Rishabh Jain',
-          dateOfBirth: '1998-05-12',
-          mrn: 'MRN-338291',
-          phoneNumber: '(555) 819-2031',
-          emergencyContact: 'Sneha Jain (Sister) - (555) 819-2032',
->>>>>>> 817daab (Initial commit to PulseFlow)
         },
       },
       {
@@ -389,19 +303,6 @@ class HospitalDatabase {
           painScore: 2,
         },
         phi: {
-<<<<<<< HEAD
-          legalFullName: 'Gaurav Kulkarni',
-          dateOfBirth: '1960-08-09',
-          mrn: 'MRN-190483',
-          phoneNumber: '+91 98604 3921',
-          emergencyContact: 'Hema Kulkarni (Wife) - +91 98604 3922',
-=======
-          legalFullName: 'Ashok Agarwal',
-          dateOfBirth: '1960-08-09',
-          mrn: 'MRN-190483',
-          phoneNumber: '(555) 604-3921',
-          emergencyContact: 'Meena Agarwal (Wife) - (555) 604-3922',
->>>>>>> 817daab (Initial commit to PulseFlow)
         },
       },
       // Urgent Care Patients
@@ -416,11 +317,6 @@ class HospitalDatabase {
         triageTime: createTime(18),
         treatmentStartTime: createTime(8),
         assignedProviderId: 'prov-6',
-<<<<<<< HEAD
-        assignedProviderName: 'Sanjay Gupta, PA-C',
-=======
-        assignedProviderName: 'Rahul Verma, PA-C',
->>>>>>> 817daab (Initial commit to PulseFlow)
         assignedRoomId: 'bay-7',
         assignedRoomName: 'FastTrack Room A',
         calculatedPriorityScore: 50,
@@ -437,19 +333,6 @@ class HospitalDatabase {
           painScore: 3,
         },
         phi: {
-<<<<<<< HEAD
-          legalFullName: 'Lakshya Agarwal',
-          dateOfBirth: '2005-03-14',
-          mrn: 'MRN-603921',
-          phoneNumber: '+91 98993 4412',
-          emergencyContact: 'Pooja Agarwal (Mother) - +91 98993 4413',
-=======
-          legalFullName: 'Aryan Joshi',
-          dateOfBirth: '2005-03-14',
-          mrn: 'MRN-603921',
-          phoneNumber: '(555) 993-4412',
-          emergencyContact: 'Pooja Joshi (Mother) - (555) 993-4413',
->>>>>>> 817daab (Initial commit to PulseFlow)
         },
       },
       {
@@ -465,11 +348,6 @@ class HospitalDatabase {
         waitTrend: 'stable',
         isPriorityOverridden: false,
         phi: {
-<<<<<<< HEAD
-          legalFullName: 'Harshita Desai',
-=======
-          legalFullName: 'Nandini Das',
->>>>>>> 817daab (Initial commit to PulseFlow)
           dateOfBirth: '1992-12-05',
           mrn: 'MRN-904128',
           phoneNumber: '+91 98441 9023',
@@ -488,11 +366,6 @@ class HospitalDatabase {
         triageTime: createTime(28),
         treatmentStartTime: createTime(12),
         assignedProviderId: 'prov-7',
-<<<<<<< HEAD
-        assignedProviderName: 'Dr. Neha Desai, MD',
-=======
-        assignedProviderName: 'Dr. Neha Gupta, MD',
->>>>>>> 817daab (Initial commit to PulseFlow)
         assignedRoomId: 'bay-10',
         assignedRoomName: 'Pediatric Suite 1',
         calculatedPriorityScore: 78,
@@ -509,19 +382,6 @@ class HospitalDatabase {
           painScore: 6,
         },
         phi: {
-<<<<<<< HEAD
-          legalFullName: 'Lavanya Iyer (Age 4)',
-          dateOfBirth: '2022-06-19',
-          mrn: 'MRN-110294',
-          phoneNumber: '+91 98773 1092',
-          emergencyContact: 'Ekta Iyer (Mother) - +91 98773 1093',
-=======
-          legalFullName: 'Aarav Sharma (Age 4)',
-          dateOfBirth: '2022-06-19',
-          mrn: 'MRN-110294',
-          phoneNumber: '(555) 773-1092',
-          emergencyContact: 'Anjali Sharma (Mother) - (555) 773-1093',
->>>>>>> 817daab (Initial commit to PulseFlow)
         },
       },
       // Trauma Center Patient
@@ -535,11 +395,6 @@ class HospitalDatabase {
         arrivalTime: createTime(15),
         treatmentStartTime: createTime(15),
         assignedProviderId: 'prov-9',
-<<<<<<< HEAD
-        assignedProviderName: 'Dr. Vikram Rathore, FACS',
-=======
-        assignedProviderName: 'Dr. Arjun Mehta, FACS',
->>>>>>> 817daab (Initial commit to PulseFlow)
         assignedRoomId: 'bay-12',
         assignedRoomName: 'Resus Bay Alpha',
         calculatedPriorityScore: 99,
@@ -556,11 +411,6 @@ class HospitalDatabase {
           painScore: 9,
         },
         phi: {
-<<<<<<< HEAD
-          legalFullName: 'Agyaat Vyakti (Male, ~35)',
-=======
-          legalFullName: 'Unknown Patient (Male, ~35)',
->>>>>>> 817daab (Initial commit to PulseFlow)
           dateOfBirth: '1991-01-01',
           mrn: 'MRN-TRAUMA-01',
           phoneNumber: 'EMS Inbound',
@@ -582,13 +432,6 @@ class HospitalDatabase {
     });
 
     this.addAuditLog({
-<<<<<<< HEAD
-      userId: 'nurse-lin-03',
-      userName: 'Kavita Singh, RN',
-=======
-      userId: 'nurse-patel-03',
-      userName: 'Priya Patel, RN',
->>>>>>> 817daab (Initial commit to PulseFlow)
       userRole: 'Nurse',
       action: 'PATIENT_INTAKE',
       patientToken: 'PT-5120',
@@ -664,6 +507,34 @@ class HospitalDatabase {
 
   getProviders() {
     return Array.from(this.providers.values());
+  }
+
+  registerProvider(data) {
+    const id = `prov-${Date.now()}`;
+    const newProvider = {
+      id,
+      name: data.name,
+      role: data.role,
+      departmentId: data.departmentId,
+      status: 'on_duty',
+      activePatientsCount: 0,
+      maxPatientsCapacity: 6,
+      email: data.email,
+      npi: data.npi,
+      facility: data.facility
+    };
+    this.providers.set(id, newProvider);
+    
+    this.addAuditLog({
+      userId: id,
+      userName: data.name,
+      userRole: data.role,
+      action: 'PROVIDER_REGISTERED',
+      details: `New clinical provider registered and paired with ${data.departmentId}.`,
+      ipAddress: '10.24.11.99',
+    });
+    
+    return newProvider;
   }
 
   getRooms() {
