@@ -90,3 +90,4 @@ This builds the React application into the `client/dist` directory, which the Ex
 ```bash
 NODE_ENV=production npm run start
 ```
+<!-- Health Insurance Portability and Accountability Act. -->
