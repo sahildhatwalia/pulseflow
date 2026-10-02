@@ -69,7 +69,9 @@ function Dashboard() {
       if (depts && depts.length > 0) {
         setSelectedDepartmentId(depts[0].id);
       }
-      setPatients(qRes.data || []);
+
+      const queuePatients = Array.isArray(qRes) ? qRes : (qRes?.data ?? []);
+      setPatients(queuePatients);
       setProviders(provs || []);
       setRooms(rms || []);
     }).catch(err => {

@@ -10,9 +10,13 @@ const handleResponse = async (res) => {
     window.location.href = '/login';
     throw new Error('Session expired. Please log in again.');
   }
+
   const json = await res.json();
-  if (!json.success && !json.data) throw new Error(json.error || 'API request failed');
-  return json.data || json;
+  if (!json.success && json.data === undefined) {
+    throw new Error(json.error || 'API request failed');
+  }
+
+  return json.data !== undefined ? json.data : json;
 };
 
 export async function fetchDepartments() {
