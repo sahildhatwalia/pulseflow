@@ -167,7 +167,7 @@ export function Header({
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Hospital Queue Triage & Real-Time Wait-Time Prediction System
+              Hospital Flow Intelligence & Real-Time Wait-Time Forecasting System
             </p>
           </div>
         </div>
