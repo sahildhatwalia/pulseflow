@@ -57,7 +57,7 @@ function Dashboard() {
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
   };
 
-  // Initial Data Fetch & Socket.io listeners
+  // Initial Data Fetch & Socket.io listeners will work
   useEffect(() => {
     Promise.all([
       fetchDepartments(),
