@@ -107,7 +107,7 @@ export function Header({
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
-                <span className="font-mono">Socket.io LIVE</span>
+                <span className="font-mono">Live Updates</span>
               </>
             ) : (
               <>
@@ -225,7 +225,7 @@ export function Header({
                 }`}
               >
                 <Stethoscope className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-                <span>Staff Triage Station</span>
+                <span>Patient Queue Board</span>
               </button>
 
               <button
@@ -237,7 +237,7 @@ export function Header({
                 }`}
               >
                 <Sliders className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                <span>Admin Priority Overrides</span>
+                <span>Priority Management</span>
               </button>
 
               <button
@@ -261,7 +261,7 @@ export function Header({
                 }`}
               >
                 <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>HIPAA & Audit Logs</span>
+                <span>Access &amp; Audit Logs</span>
               </button>
             </>
           )}
