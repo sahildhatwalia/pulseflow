@@ -1,4 +1,6 @@
-# PulseFlow
+# 🏥 PulseFlow
+
+> **Real-time AI-assisted emergency department management — faster triage, smarter queues, safer care.**
 
 ## ✨ Features & Usecases
 

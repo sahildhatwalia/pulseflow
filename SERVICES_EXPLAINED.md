@@ -178,3 +178,55 @@ If a department is completely full, administrators can activate **Ambulance Dive
 ---
 
 *This document was written in plain English for non-technical stakeholders, investors, and hospital administrators.*
+
+
+<!-- for me  -->
+What PulseFlow is
+
+PulseFlow is an emergency department (ER) workflow tool. It handles patient check-in and triage, a live queue and bed management, exam bay assignment, admin priority overrides, privacy-masked waiting room displays, and an analytics dashboard.
+
+Stack and architecture (from your files)
+Frontend: React 19 with Vite and TailwindCSS 4, plus lucide-react icons and motion animations.
+Backend: Node and Express, started from server/src/server.js. In dev, Express serves the API and also hosts the Vite frontend as middleware. In production it serves client/dist statically.
+Real-time: Socket.io pushes queue, room and status changes to every connected device.
+AI: @google/genai (Gemini 2.5 Flash) predicts the ESI triage level. groq-sdk is also installed, but the README never mentions it.
+Config: dotenv loads GEMINI_API_KEY. If the key is missing, the AI features fall back instead of crashing the server.
+Algorithms and key factors
+
+1. AI triage (ESI 1-5). This is an LLM call, not a hand-written algorithm.
+
+The server probably builds a prompt from vitals and complaint, sends it to Gemini, and parses a score and rationale from the response.
+The important points are prompt design, forcing structured JSON output, validating the result is between 1 and 5, and the fallback path.
+The AI should only suggest. The nurse should always be able to override it.
+
+2. Queue priority and wait-time estimation. This is likely the core logic.
+
+It is probably a priority queue sorted by ESI level first, then arrival time (FIFO within the same level).
+Sorting is O(n log n). A heap would give O(log n) per insert.
+Wait time is likely estimated from queue position, department, available providers and bed saturation. That is a heuristic rather than a proven algorithm, so its assumptions matter.
+A common problem to watch for is starvation, where low-acuity patients wait forever. Systems often add an aging boost to the score over time.
+
+3. Real-time sync. Server events are broadcast to all clients. Look at whether you use rooms or namespaces, and what happens when a client reconnects.
+
+4. Bed and bay assignment. A state transition on both the patient and the room. The main risk is a race condition, where two nurses assign the same bay at once. Check whether the check-and-assign is atomic.
+
+5. Override with audit logging. A role check, a mandatory justification, and a log entry. This is a compliance feature, so the log should be append-only.
+
+6. PHI masking. A token ID like PT-4190 replaces the patient’s identity in public views. The key question is whether masking happens on the server or only in the UI. It must be server-side, otherwise the data is still in the network response.
+
+7. Analytics. Door-to-Doctor time, LWBS rate, bed turnover and hourly surge. These are aggregations over timestamps.
+
+Issues I noticed
+Merge conflict markers in the README. It contains leftover <<<<<<< HEAD, ======= and >>>>>>> lines. Clean those up before showing the repo to anyone.
+Name and scripts. The package is still named react-example, and "lint" just runs vite build, so it doesn’t lint anything.
+Unused or undocumented dependency. groq-sdk is installed but not documented.
+Healthcare data. If you present this as HIPAA-compliant, expect questions about authentication, role-based access, encryption and storage. A student demo can say “HIPAA-inspired” rather than compliant.
+What I need to go deeper
+
+Paste these files here and I’ll do a line-by-line explanation with complexity analysis and a worked example for each algorithm:
+
+server/src/server.js
+The files where the queue and triage logic live (probably under server/src/, such as routes, services or utils)
+Any file with the Gemini prompt
+
+Once I have them, I can also prepare interview questions and answers for the project.
