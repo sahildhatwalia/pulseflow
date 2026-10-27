@@ -173,6 +173,11 @@ class MongoDatabase {
     return await Patient.findOne({ displayToken: cleanToken }).lean();
   }
 
+  async getPatientByEmail(email) {
+    // Targeted indexed query — avoids loading the full patient collection
+    return await Patient.findOne({ 'phi.email': email }).lean();
+  }
+
   async checkInPatient(data) {
     const id = `pat-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const displayToken = generatePatientDisplayToken();
@@ -302,21 +307,31 @@ class MongoDatabase {
   }
 
   async recalculateAllWaitTimes() {
-    // Basic async implementation of wait time recalculation using Mongoose
-    const allPatients = await Patient.find().lean();
-    const allProviders = await Provider.find().lean();
-    const allRooms = await RoomBay.find().lean();
-    const allDepts = await Department.find();
+    // Parallel fetch — avoids 4 sequential DB round-trips
+    const [allPatients, allProviders, allRooms, allDepts] = await Promise.all([
+      Patient.find().lean(),
+      Provider.find().lean(),
+      RoomBay.find().lean(),
+      Department.find(),
+    ]);
 
     for (const dept of allDepts) {
       const updatedDeptPatients = recalculateDepartmentQueue(allPatients, dept, allProviders, allRooms);
-      
-      for (const p of updatedDeptPatients) {
-        // Bulk update would be better here, but for simplicity:
-        await Patient.updateOne({ id: p.id }, { 
-          estimatedWaitMinutes: p.estimatedWaitMinutes,
-          calculatedPriorityScore: p.calculatedPriorityScore
-        });
+
+      // Single bulkWrite instead of N serial updateOne calls
+      if (updatedDeptPatients.length > 0) {
+        const bulkOps = updatedDeptPatients.map(p => ({
+          updateOne: {
+            filter: { id: p.id },
+            update: {
+              $set: {
+                estimatedWaitMinutes: p.estimatedWaitMinutes,
+                calculatedPriorityScore: p.calculatedPriorityScore,
+              },
+            },
+          },
+        }));
+        await Patient.bulkWrite(bulkOps, { ordered: false });
       }
 
       const activeWaiting = updatedDeptPatients.filter(

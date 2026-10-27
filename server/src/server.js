@@ -32,8 +32,11 @@ app.use(express.json());
 // Socket.io Real-Time Event Hub
 io.on('connection', async (socket) => {
   try {
-    const departments = await db.getDepartments();
-    const rawPatients = await db.getAllPatients();
+    // Parallel fetch — avoids sequential await round-trips
+    const [departments, rawPatients] = await Promise.all([
+      db.getDepartments(),
+      db.getAllPatients(),
+    ]);
 
     socket.emit('queue:sync', {
       departments,
@@ -54,31 +57,29 @@ io.on('connection', async (socket) => {
  */
 export async function broadcastQueueUpdate(eventPayload) {
   try {
-    const departments = await db.getDepartments();
-    const patients = await db.getAllPatients();
-    const auditLogs = await db.getAuditLogs();
+    // Fetch all data in parallel — previously 3 sequential round-trips
+    const [departments, patients, auditLogs] = await Promise.all([
+      db.getDepartments(),
+      db.getAllPatients(),
+      db.getAuditLogs(),
+    ]);
 
-    io.emit('queue:updated', {
+    const timestamp = new Date().toISOString();
+
+    // Single combined payload instead of 3 separate emits
+    io.emit('queue:sync', {
       departments,
       patients,
-      timestamp: new Date().toISOString(),
+      auditLogs: auditLogs.slice(0, 50),
+      timestamp,
       event: eventPayload,
     });
 
-    io.emit('wait_times:recalculated', {
-      departments,
-      timestamp: new Date().toISOString(),
-    });
-
-    io.emit('audit:logged', {
-      logs: auditLogs.slice(0, 50),
-    });
-
-    if (eventPayload && eventPayload.eventType === 'patient:called') {
+    // Specific event emits for targeted listeners
+    if (eventPayload?.eventType === 'patient:called') {
       io.emit('patient:called', eventPayload);
     }
-
-    if (eventPayload && eventPayload.eventType === 'priority:overridden') {
+    if (eventPayload?.eventType === 'priority:overridden') {
       io.emit('priority:overridden', eventPayload);
     }
   } catch (err) {
@@ -315,32 +316,31 @@ app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     
-    // 1. Check Staff
+    // 1. Check Staff first — avoids loading all patients on every login
     const providers = await db.getProviders();
     let user = providers.find(p => p.email === email || p.id === email);
     
-    // 2. Check Patients
+    // 2. Admin convenience fallback (before patient lookup to avoid unnecessary DB hit)
+    if (!user && (email === 'admin' || email.includes('admin'))) {
+      user = providers.find(p => p.role === 'Administrator') || providers[0];
+    }
+
+    // 3. Only hit the patients collection if staff lookup failed
     if (!user) {
-      const patients = await db.getAllPatients();
-      const patient = patients.find(p => p.phi?.email === email || p.displayToken === email);
+      const patient = await db.getPatientByEmail(email);
       if (patient) {
         user = {
           id: patient.id,
           name: patient.phi?.legalFullName || patient.displayToken,
           role: 'Patient',
-          email: email
+          email: email,
         };
       }
     }
     
-    // Fallback for demo convenience
-    if (!user && (email === 'admin' || email.includes('admin'))) {
-      user = providers.find(p => p.role === 'Administrator') || providers[0];
-    }
-    
     if (user) {
       const token = generateToken(user);
-      res.json({ success: true, data: { user: user, token } });
+      res.json({ success: true, data: { user, token } });
     } else {
       res.status(401).json({ success: false, error: 'Invalid credentials.' });
     }
