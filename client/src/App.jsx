@@ -10,6 +10,9 @@ import Login from './pages/Login.jsx';
 import Onboarding from './pages/Onboarding.jsx';
 import { ProtectedRoute } from './components/ProtectedRoute.jsx';
 import { HipaaComplianceView } from './components/HipaaComplianceView.jsx';
+import { PatientPortal } from './components/PatientPortal.jsx';
+import { DoctorView } from './components/DoctorView.jsx';
+import { ReceptionistView } from './components/ReceptionistView.jsx';
 import { getSocket } from './services/socket.js';
 import { 
   fetchDepartments, 
@@ -23,6 +26,16 @@ import {
   simulateArrival,
   resetDatabase
 } from './services/api.js';
+
+// Helper: read logged-in user role from localStorage
+function getLoggedInUser() {
+  try {
+    const s = localStorage.getItem('pulseflow_user');
+    return s ? JSON.parse(s) : null;
+  } catch (_) {
+    return null;
+  }
+}
 
 function Dashboard() {
   const [activeTab, setActiveTab] = useState('patient');
@@ -166,6 +179,49 @@ function Dashboard() {
       await resetDatabase();
     }
   };
+
+  // ── Role-based rendering ─────────────────────────────────────────────
+  const currentUser = getLoggedInUser();
+  const userRole = currentUser?.role || '';
+
+  // 1. Patient → Patient Portal
+  if (userRole === 'Patient') {
+    return (
+      <PatientPortal
+        patients={patients}
+        departments={departments}
+        onCheckInSubmit={handleCheckIn}
+      />
+    );
+  }
+
+  // 2. Doctor / Charge Nurse → Clinical Dashboard
+  if (userRole === 'Clinical Provider' || userRole === 'Charge Nurse') {
+    return (
+      <DoctorView
+        patients={patients}
+        departments={departments}
+        providers={providers}
+        rooms={rooms}
+        onStatusUpdate={handleStatusUpdate}
+        socketConnected={socketConnected}
+      />
+    );
+  }
+
+  // 3. Hospital Operations / Receptionist → Reception Console
+  if (userRole === 'Hospital Operations') {
+    return (
+      <ReceptionistView
+        patients={patients}
+        departments={departments}
+        onCheckInSubmit={handleCheckIn}
+        socketConnected={socketConnected}
+      />
+    );
+  }
+
+  // 4. Administrator / Clinical Supervisor → Full Dashboard (falls through below)
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">

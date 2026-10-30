@@ -39,6 +39,17 @@ export function Header({
     if (userStr) user = JSON.parse(userStr);
   } catch (e) {}
 
+  // Role identity config for badge
+  const ROLE_BADGES = {
+    'Administrator':        { icon: '🛡️', label: 'Administrator',        color: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/70 dark:text-amber-300 dark:border-amber-700/60' },
+    'Clinical Supervisor':  { icon: '🏥', label: 'Clinical Supervisor',   color: 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950/70 dark:text-purple-300 dark:border-purple-700/60' },
+    'Clinical Provider':    { icon: '👨‍⚕️', label: 'Doctor',               color: 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-950/70 dark:text-blue-300 dark:border-blue-700/60' },
+    'Charge Nurse':         { icon: '👩‍⚕️', label: 'Charge Nurse',         color: 'bg-violet-100 text-violet-800 border-violet-300 dark:bg-violet-950/70 dark:text-violet-300 dark:border-violet-700/60' },
+    'Hospital Operations':  { icon: '🛎️', label: 'Receptionist',          color: 'bg-teal-100 text-teal-800 border-teal-300 dark:bg-teal-950/70 dark:text-teal-300 dark:border-teal-700/60' },
+    'Patient':              { icon: '🧑‍🤝‍🧑', label: 'Patient',              color: 'bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-950/70 dark:text-sky-300 dark:border-sky-700/60' },
+  };
+  const roleBadge = ROLE_BADGES[user?.role] || { icon: '👤', label: user?.role || 'Staff', color: 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700' };
+
   return (
     <header className="border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur sticky top-0 z-40 transition-colors shadow-sm dark:shadow-none">
       {/* Top Banner: Clinical Status & Real-time Indicator */}
@@ -195,6 +206,15 @@ export function Header({
                 )}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* WHO IS THIS USER — role identity badge */}
+        <div className={`flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl border font-semibold text-xs shadow-xs ${roleBadge.color}`}>
+          <span className="text-base">{roleBadge.icon}</span>
+          <div className="hidden sm:block">
+            <div className="text-[9px] uppercase tracking-widest opacity-60 font-bold leading-tight">Signed in as</div>
+            <div className="font-extrabold leading-tight">{roleBadge.label} — {user?.name || 'User'}</div>
           </div>
         </div>
       </div>

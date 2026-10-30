@@ -76,10 +76,10 @@ export default function Login() {
             <form onSubmit={handleLogin} className="space-y-4">
               <Input
                 name="email"
-                label="Email / Staff ID"
-                placeholder="you@hospital.org"
+                label={role === 'patient' ? 'Patient Email' : 'Email / Staff ID'}
+                placeholder={role === 'patient' ? 'patient@mediqueue.com' : 'you@hospital.org'}
                 icon={Mail}
-                defaultValue="admin@mediqueue.com"
+                defaultValue={role === 'patient' ? 'patient@mediqueue.com' : 'admin@mediqueue.com'}
                 required
               />
               <div>
