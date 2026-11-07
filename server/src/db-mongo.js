@@ -11,7 +11,9 @@ class MongoDatabase {
       console.log('✅ Connected to MongoDB');
       
       const deptCount = await Department.countDocuments();
-      if (deptCount === 0) {
+      const providerCount = await Provider.countDocuments();
+      // Re-seed if departments missing OR providers are fewer than expected (handles role additions)
+      if (deptCount === 0 || providerCount < 5) {
         console.log('🌱 Seeding initial MongoDB data...');
         await this.seedInitialData();
       }

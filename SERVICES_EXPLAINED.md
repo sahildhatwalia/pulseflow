@@ -138,7 +138,8 @@ Not everyone who uses PulseFlow gets to see the same things. The system has **th
 
 | Role | What They Can Do |
 |------|-----------------|
-| **Patient / Public** | See the waiting board, check in, track their ticket |
+| **Patient (Public - `/patient`)** | Quick access without login: instant ticket tracking, live wait times across all departments, emergency guides |
+| **Patient (Portal - Logged In)** | Dedicated 5-tab portal: My Care dashboard, live ticket tracker with 5-stage Care Pathway, self check-in kiosk with 1-click symptom chips, live wait times, and emergency FAQ/Help |
 | **Staff / Nurse** | Full patient details, triage tools, room assignments |
 | **Admin / Charge Nurse** | Everything above + priority overrides + department settings |
 

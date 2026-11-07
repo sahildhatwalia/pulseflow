@@ -139,3 +139,20 @@ export function logoutUser() {
   localStorage.removeItem('pulseflow_user');
   window.location.href = '/login';
 }
+
+// ─── PUBLIC API (No Authentication Required) ────────────────────────────────
+// These endpoints allow patients to track tickets and view wait times without logging in.
+
+export async function publicTrackTicket(token) {
+  const res = await fetch(`/api/public/track/${encodeURIComponent(token)}`);
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error || 'Ticket not found');
+  return json.data;
+}
+
+export async function publicGetWaitTimes() {
+  const res = await fetch('/api/public/wait-times');
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error || 'Failed to load wait times');
+  return json.data;
+}

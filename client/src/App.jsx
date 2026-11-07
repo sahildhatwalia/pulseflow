@@ -13,6 +13,7 @@ import { HipaaComplianceView } from './components/HipaaComplianceView.jsx';
 import { PatientPortal } from './components/PatientPortal.jsx';
 import { DoctorView } from './components/DoctorView.jsx';
 import { ReceptionistView } from './components/ReceptionistView.jsx';
+import PatientAccess from './pages/PatientAccess.jsx';
 import { getSocket } from './services/socket.js';
 import { 
   fetchDepartments, 
@@ -307,6 +308,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/patient" element={<PatientAccess />} />
       <Route path="/onboarding" element={<Onboarding />} />
       <Route path="/onboarding/verify" element={<Onboarding />} />
       <Route path="/onboarding/facility" element={<Onboarding />} />

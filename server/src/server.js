@@ -89,6 +89,68 @@ export async function broadcastQueueUpdate(eventPayload) {
 
 // REST API Endpoints
 
+// ─── PUBLIC ENDPOINTS (No Authentication Required) ────────────────────────────
+// These allow patients to track tickets and view wait times without logging in.
+
+// Public: Track a patient ticket by display token (returns de-identified data only)
+app.get('/api/public/track/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    const patient = await db.getPatientByToken(token.toUpperCase());
+
+    if (!patient) {
+      res.status(404).json({ success: false, error: 'No active record found for this ticket number. Please verify your ticket with the triage desk.' });
+      return;
+    }
+
+    // Return only safe, de-identified data — no PHI, no vitals
+    const safeData = {
+      displayToken: patient.displayToken,
+      status: patient.status,
+      departmentId: patient.departmentId,
+      estimatedWaitMinutes: patient.estimatedWaitMinutes,
+      waitTrend: patient.waitTrend,
+      chiefComplaint: patient.chiefComplaint,
+      assignedRoomName: patient.assignedRoomName || null,
+      assignedProviderName: patient.assignedProviderName ? patient.assignedProviderName.split(' ')[0] + ' ...' : null,
+      arrivalTime: patient.arrivalTime,
+      esiLevel: patient.esiLevel,
+      calculatedPriorityScore: patient.calculatedPriorityScore,
+    };
+
+    res.json({ success: true, data: safeData });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Public: Get department wait times (de-identified — no patient data)
+app.get('/api/public/wait-times', async (req, res) => {
+  try {
+    const departments = await db.getDepartments();
+    // Return only public-safe department info
+    const safeData = departments.map(d => ({
+      id: d.id,
+      name: d.name,
+      code: d.code,
+      description: d.description,
+      averageWaitMinutes: d.averageWaitMinutes,
+      surgeStatus: d.surgeStatus,
+      queueCount: d.queueCount,
+      totalBeds: d.totalBeds,
+      occupiedBeds: d.occupiedBeds,
+      activePhysicians: d.activePhysicians,
+      activeNurses: d.activeNurses,
+      isDiverting: d.isDiverting,
+    }));
+    res.json({ success: true, data: safeData });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ─── AUTHENTICATED ENDPOINTS ──────────────────────────────────────────────────
+
 // 1. Departments
 app.get('/api/departments', authMiddleware, async (req, res) => {
   try {
