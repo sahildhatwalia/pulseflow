@@ -129,10 +129,10 @@ export default function PatientAccess() {
           </div>
 
           <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight mb-3">
-            Welcome to PulseFlow Patient Portal
+            Hospital Queue Prediction System
           </h1>
           <p className="text-base sm:text-lg text-white/80 max-w-xl mx-auto leading-relaxed">
-            Track your visit, check wait times, and stay informed — no login required.
+            Real-time patient queue tracking &amp; predictive wait time forecasting — no login required.
           </p>
 
           {/* Quick stat pills */}

@@ -373,29 +373,50 @@ app.get('/api/analytics', authMiddleware, async (req, res) => {
   }
 });
 
+// Known system demo accounts for seamless multi-role access
+const DEMO_ACCOUNTS = [
+  { id: 'prov-admin',      name: 'Jane Admin',          role: 'Administrator',       departmentId: 'dept-ed',    email: 'admin@mediqueue.com' },
+  { id: 'prov-supervisor', name: 'Dr. Sam Okonkwo',     role: 'Clinical Supervisor', departmentId: 'dept-trauma',email: 'supervisor@mediqueue.com' },
+  { id: 'prov-doctor',     name: 'Dr. Aisha Kapoor',    role: 'Clinical Provider',   departmentId: 'dept-ed',    email: 'doctor@mediqueue.com' },
+  { id: 'prov-nurse',      name: 'Marcus Chen, RN',     role: 'Charge Nurse',        departmentId: 'dept-ed',    email: 'nurse@mediqueue.com' },
+  { id: 'prov-reception',  name: 'Priya Sharma',        role: 'Hospital Operations', departmentId: 'dept-ed',    email: 'reception@mediqueue.com' },
+  { id: 'prov-staff',      name: 'John Staff, RN',      role: 'Clinical Provider',   departmentId: 'dept-uc',    email: 'staff@mediqueue.com' },
+  { id: 'pat-1',           name: 'Demo Patient',        role: 'Patient',             departmentId: 'dept-ed',    email: 'patient@mediqueue.com' },
+];
+
 // Auth & Registration
 app.post('/api/auth/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
-    
-    // 1. Check Staff first — avoids loading all patients on every login
-    const providers = await db.getProviders();
-    let user = providers.find(p => p.email === email || p.id === email);
-    
-    // 2. Admin convenience fallback (before patient lookup to avoid unnecessary DB hit)
-    if (!user && (email === 'admin' || email.includes('admin'))) {
-      user = providers.find(p => p.role === 'Administrator') || providers[0];
+    const { email } = req.body;
+    const cleanEmail = email?.trim().toLowerCase() || '';
+
+    // 1. Check known system demo accounts by full email, ID, or role keyword
+    let user = DEMO_ACCOUNTS.find(a => 
+      a.email.toLowerCase() === cleanEmail || 
+      a.id.toLowerCase() === cleanEmail ||
+      (cleanEmail.includes('admin') && a.role === 'Administrator') ||
+      (cleanEmail.includes('supervisor') && a.role === 'Clinical Supervisor') ||
+      (cleanEmail.includes('doctor') && a.email.includes('doctor')) ||
+      (cleanEmail.includes('nurse') && a.role === 'Charge Nurse') ||
+      (cleanEmail.includes('reception') && a.role === 'Hospital Operations') ||
+      (cleanEmail.includes('patient') && a.role === 'Patient')
+    );
+
+    // 2. Check Database Providers if not matched in demo accounts
+    if (!user) {
+      const providers = await db.getProviders();
+      user = providers.find(p => p.email?.toLowerCase() === cleanEmail || p.id?.toLowerCase() === cleanEmail);
     }
 
-    // 3. Only hit the patients collection if staff lookup failed
+    // 3. Check Database Patients by email
     if (!user) {
-      const patient = await db.getPatientByEmail(email);
+      const patient = await db.getPatientByEmail(cleanEmail);
       if (patient) {
         user = {
           id: patient.id,
           name: patient.phi?.legalFullName || patient.displayToken,
           role: 'Patient',
-          email: email,
+          email: cleanEmail,
         };
       }
     }
@@ -404,7 +425,7 @@ app.post('/api/auth/login', async (req, res) => {
       const token = generateToken(user);
       res.json({ success: true, data: { user, token } });
     } else {
-      res.status(401).json({ success: false, error: 'Invalid credentials.' });
+      res.status(401).json({ success: false, error: 'Invalid credentials. Please select one of the hospital demo roles.' });
     }
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

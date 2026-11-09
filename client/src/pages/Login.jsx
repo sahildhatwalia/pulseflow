@@ -84,6 +84,21 @@ export default function Login() {
     setError('');
   };
 
+  const instantLogin = async (role) => {
+    setSelectedRole(role);
+    setEmailValue(role.email);
+    setIsLoading(true);
+    setError('');
+    try {
+      await loginUser(role.email, 'password123');
+      navigate(from, { replace: true });
+    } catch (err) {
+      setError(err.message || 'Authentication failed. Please check your credentials.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -124,41 +139,72 @@ export default function Login() {
           </button>
         </div>
 
-        {/* ── Logo & heading ───────────────────────────────────────── */}
-        <div className="flex flex-col items-center mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-teal-600 via-cyan-600 to-sky-500 flex items-center justify-center text-white shadow-lg mb-4 ring-4 ring-teal-500/20">
-            <Activity className="w-7 h-7 stroke-[2.5]" />
+        {/* ── Hospital Emblem & Heading ────────────────────────────── */}
+        <div className="flex flex-col items-center mb-6 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-teal-600 via-cyan-600 to-sky-500 flex items-center justify-center text-white shadow-lg mb-3 ring-4 ring-teal-500/20">
+            <Activity className="w-8 h-8 stroke-[2.5]" />
           </div>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">PulseFlow</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Select your role to sign in to the right portal</p>
+          <div className="flex items-center gap-1.5 text-xs font-bold text-teal-700 dark:text-cyan-400 uppercase tracking-widest">
+            <span>St. Jude Health Network</span>
+            <span>•</span>
+            <span>Level 1 Trauma</span>
+          </div>
+          <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight mt-0.5">
+            Hospital Queue Prediction System
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Real-time wait time forecasting, patient triage &amp; queue telemetry
+          </p>
         </div>
 
         {/* ── Role selector grid ───────────────────────────────────── */}
         <div className="mb-5">
-          <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2.5">
-            Who are you?
-          </p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              Select Demo Identity
+            </p>
+            <span className="text-[10px] text-teal-600 dark:text-cyan-400 font-semibold">
+              1-Click Instant Sign-In
+            </span>
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {DEMO_ROLES.map(role => (
-              <button
-                key={role.id}
-                type="button"
-                onClick={() => selectRole(role)}
-                className={`flex flex-col items-start gap-1.5 p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                  selectedRole.id === role.id ? role.borderActive : role.borderIdle
-                }`}
-              >
-                <span className="text-xl">{role.icon}</span>
-                <div>
-                  <div className="text-xs font-extrabold text-slate-900 dark:text-white leading-tight">
-                    {role.label}
+            {DEMO_ROLES.map(role => {
+              const isSelected = selectedRole.id === role.id;
+              return (
+                <button
+                  key={role.id}
+                  type="button"
+                  onClick={() => selectRole(role)}
+                  onDoubleClick={() => instantLogin(role)}
+                  className={`flex flex-col items-start gap-1 p-2.5 rounded-xl border text-left transition-all cursor-pointer relative group ${
+                    isSelected ? role.borderActive : role.borderIdle
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xl">{role.icon}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        instantLogin(role);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 text-[10px] bg-teal-600 text-white px-1.5 py-0.5 rounded font-bold transition-opacity shadow-xs"
+                      title="Instant Sign In as this role"
+                    >
+                      Login →
+                    </button>
                   </div>
-                  <div className="text-[9px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
-                    {role.desc}
+                  <div>
+                    <div className="text-xs font-extrabold text-slate-900 dark:text-white leading-tight">
+                      {role.label}
+                    </div>
+                    <div className="text-[9px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug line-clamp-2">
+                      {role.desc}
+                    </div>
                   </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         </div>
 

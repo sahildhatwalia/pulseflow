@@ -24,6 +24,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { logoutUser } from '../services/api.js';
+import { HospitalRoleSwitcher } from './HospitalRoleSwitcher.jsx';
 
 // ─── Role badge config ─────────────────────────────────────────────────────
 const ROLE_CONFIG = {
@@ -71,7 +72,7 @@ function VitalChip({ label, value, alert }) {
   );
 }
 
-function PatientCard({ patient, rooms, onStatusUpdate, deptProviders }) {
+function PatientCard({ patient, rooms, onStatusUpdate, deptProviders, queueRank }) {
   const [showPhi, setShowPhi] = useState(false);
   const [showVitals, setShowVitals] = useState(false);
   const [assigningRoom, setAssigningRoom] = useState(false);
@@ -92,6 +93,17 @@ function PatientCard({ patient, rooms, onStatusUpdate, deptProviders }) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xl font-extrabold font-mono text-slate-900 dark:text-white tracking-wide">{patient.displayToken}</span>
+              
+              {queueRank > 0 && !isDischarged && patient.status !== 'in_treatment' && (
+                <span className={`px-2 py-0.5 rounded text-[10px] font-black font-mono uppercase tracking-wider ${
+                  queueRank === 1
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-teal-50 text-teal-800 dark:bg-cyan-950 dark:text-cyan-300 border border-teal-200 dark:border-cyan-800'
+                }`}>
+                  {queueRank === 1 ? '★ #1 NEXT IN QUEUE' : `#${queueRank} IN QUEUE`}
+                </span>
+              )}
+
               <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border uppercase tracking-wide ${esi.badge}`}>
                 ESI {patient.esiLevel} — {esi.label}
               </span>
@@ -305,6 +317,10 @@ export function DoctorView({ patients = [], departments = [], providers = [], ro
   const inTreatment   = deptPatients.filter(p => p.status === 'in_treatment').length;
   const waiting       = deptPatients.filter(p => ['checked_in','in_triage','triage_completed','waiting_for_bed'].includes(p.status)).length;
 
+  // Active waiting patients ordered by priority score for queue ranking
+  const waitingPatients = deptPatients.filter(p => ['checked_in','in_triage','triage_completed','waiting_for_bed'].includes(p.status))
+    .sort((a, b) => b.calculatedPriorityScore - a.calculatedPriorityScore);
+
   React.useEffect(() => {
     const root = document.documentElement;
     theme === 'dark' ? root.classList.add('dark') : root.classList.remove('dark');
@@ -321,12 +337,13 @@ export function DoctorView({ patients = [], departments = [], providers = [], ro
           <div className="flex items-center gap-3 text-xs">
             <span className="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300">
               <span className="w-2 h-2 rounded-full bg-teal-500 dark:bg-cyan-400 animate-pulse" />
-              PulseFlow Clinical Queue Engine v2.4
+              Hospital Queue Prediction System · Clinical Engine
             </span>
             <span className="hidden sm:inline text-slate-300 dark:text-slate-700">•</span>
             <span className="hidden sm:inline text-slate-500 dark:text-slate-400">St. Jude Metropolitan Academic Health</span>
           </div>
           <div className="flex items-center gap-2">
+            <HospitalRoleSwitcher />
             {/* Socket indicator */}
             <span className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${
               socketConnected
@@ -353,12 +370,12 @@ export function DoctorView({ patients = [], departments = [], providers = [], ro
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">PulseFlow</h1>
+                <h1 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">Hospital Queue Prediction System</h1>
                 <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800 px-2 py-0.5 rounded font-mono font-semibold">
-                  Clinical Dashboard
+                  Doctor &amp; Clinical Portal
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Patient management & clinical workflow</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Emergency Patient Queue &amp; Bed Telemetry</p>
             </div>
           </div>
 
@@ -457,15 +474,20 @@ export function DoctorView({ patients = [], departments = [], providers = [], ro
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredPatients.map(patient => (
-                <PatientCard
-                  key={patient.id}
-                  patient={patient}
-                  rooms={deptRooms}
-                  deptProviders={deptProviders}
-                  onStatusUpdate={onStatusUpdate}
-                />
-              ))}
+              {filteredPatients.map(patient => {
+                const rankIdx = waitingPatients.findIndex(p => p.id === patient.id);
+                const queueRank = rankIdx >= 0 ? rankIdx + 1 : 0;
+                return (
+                  <PatientCard
+                    key={patient.id}
+                    patient={patient}
+                    rooms={deptRooms}
+                    deptProviders={deptProviders}
+                    onStatusUpdate={onStatusUpdate}
+                    queueRank={queueRank}
+                  />
+                );
+              })}
             </div>
           )}
         </div>
@@ -504,7 +526,7 @@ export function DoctorView({ patients = [], departments = [], providers = [], ro
       </main>
 
       <footer className="border-t border-slate-200 dark:border-slate-900 bg-white/80 dark:bg-slate-950/80 px-6 py-3 text-center text-xs text-slate-400 dark:text-slate-500">
-        PulseFlow Clinical Systems © 2026 · St. Jude Health Network · {roleConf.icon} {roleConf.label} Portal · HIPAA Safeguard Level 3
+        Hospital Queue Prediction System © 2026 · Clinical Operations Engine · St. Jude Health Network · {roleConf.icon} {roleConf.label} Portal · HIPAA Safeguard Level 3
       </footer>
     </div>
   );

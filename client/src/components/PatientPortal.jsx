@@ -36,6 +36,7 @@ import {
   Users,
 } from 'lucide-react';
 import { logoutUser, fetchPatientByToken } from '../services/api.js';
+import { HospitalRoleSwitcher } from './HospitalRoleSwitcher.jsx';
 
 // ─── Care Pathway Configuration ───────────────────────────────────────────────
 const CARE_STEPS = [
@@ -79,7 +80,7 @@ const QUICK_SYMPTOMS = [
 const FAQS = [
   {
     q: 'How is my waiting time determined?',
-    a: 'PulseFlow uses the clinical Emergency Severity Index (ESI 1-5). Patients experiencing life-threatening conditions (ESI 1 & 2) receive immediate care, regardless of arrival time. Your position updates dynamically based on current medical priority and hospital physician capacity.',
+    a: 'Hospital Queue Prediction System uses the clinical Emergency Severity Index (ESI 1-5). Patients experiencing life-threatening conditions (ESI 1 & 2) receive immediate care, regardless of arrival time. Your position updates dynamically based on current medical priority and hospital physician capacity.',
   },
   {
     q: 'What should I do if my symptoms become worse while waiting?',
@@ -91,11 +92,11 @@ const FAQS = [
   },
   {
     q: 'How will I be alerted when an exam room is ready for me?',
-    a: 'PulseFlow will flash your Ticket Token on this portal and on the waiting lounge departure displays. If you provided your mobile number at check-in, an automated SMS alert will also be sent.',
+    a: 'The Hospital Queue Prediction System will flash your Ticket Token on this portal and on the waiting lounge departure displays. If you provided your mobile number at check-in, an automated SMS alert will also be sent.',
   },
   {
     q: 'Is my personal medical information visible on public displays?',
-    a: 'No. PulseFlow adheres strictly to HIPAA Safe Harbor guidelines (45 CFR § 164.312). Public lobby monitors and boards display only anonymized ticket tokens (e.g. PT-4190). Your legal name and diagnosis are completely confidential.',
+    a: 'No. The Hospital Queue Prediction System adheres strictly to HIPAA Safe Harbor guidelines (45 CFR § 164.312). Public lobby monitors and boards display only anonymized ticket tokens (e.g. PT-4190). Your legal name and diagnosis are completely confidential.',
   },
 ];
 
@@ -265,6 +266,16 @@ export function PatientPortal({ patients = [], departments = [], onCheckInSubmit
     p => p.phi?.email === patientEmail && p.status !== 'discharged'
   ) || trackedPatient;
 
+  // Calculate waiting list in patient's department and dynamic queue position
+  const deptWaitingPatients = patients.filter(
+    p => p.departmentId === (myQueueEntry?.departmentId || 'dept-ed') &&
+         ['checked_in', 'in_triage', 'triage_completed', 'waiting_for_bed'].includes(p.status)
+  ).sort((a, b) => (b.calculatedPriorityScore || 0) - (a.calculatedPriorityScore || 0));
+
+  const myQueueRank = myQueueEntry 
+    ? deptWaitingPatients.findIndex(p => p.id === myQueueEntry.id || p.displayToken === myQueueEntry.displayToken) + 1 
+    : 0;
+
   // Refresh tracked patient when patients socket array updates
   useEffect(() => {
     if (!trackedPatient) return;
@@ -403,7 +414,7 @@ export function PatientPortal({ patients = [], departments = [], onCheckInSubmit
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-lg font-black tracking-tight text-slate-900 dark:text-white">PulseFlow</span>
+                <span className="text-lg font-black tracking-tight text-slate-900 dark:text-white">Hospital Queue Prediction System</span>
                 <span className="text-[10px] font-bold bg-teal-50 text-teal-700 dark:bg-cyan-950 dark:text-cyan-300 border border-teal-200 dark:border-cyan-800/70 px-2 py-0.5 rounded-full">
                   Patient Portal
                 </span>
@@ -414,6 +425,7 @@ export function PatientPortal({ patients = [], departments = [], onCheckInSubmit
 
           {/* User Controls */}
           <div className="flex items-center gap-2">
+            <HospitalRoleSwitcher />
             <button
               onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
               className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 transition-all cursor-pointer"
@@ -556,10 +568,60 @@ export function PatientPortal({ patients = [], departments = [], onCheckInSubmit
                           ~{myQueueEntry.estimatedWaitMinutes ?? 18}
                         </span>
                         <span className="text-xs font-bold text-slate-500">mins</span>
+                        {myQueueEntry.waitTrend === 'falling' && (
+                          <span className="text-emerald-600 dark:text-emerald-400 text-xs font-bold ml-1 flex items-center" title="Decreasing wait">
+                            <ArrowDownRight className="w-3.5 h-3.5" /> ↓
+                          </span>
+                        )}
+                        {myQueueEntry.waitTrend === 'rising' && (
+                          <span className="text-rose-600 dark:text-rose-400 text-xs font-bold ml-1 flex items-center" title="Increasing wait">
+                            <ArrowUpRight className="w-3.5 h-3.5" /> ↑
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
                 </div>
+
+                {/* Live Queue Position & Velocity Banner */}
+                {myQueueRank > 0 && myQueueEntry.status !== 'in_treatment' && myQueueEntry.status !== 'discharged' && (
+                  <div className="bg-gradient-to-r from-teal-50 via-cyan-50 to-sky-50 dark:from-slate-950 dark:via-cyan-950/40 dark:to-slate-950 border border-teal-200 dark:border-cyan-800/60 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-teal-600 dark:bg-cyan-600 text-white flex items-center justify-center font-black font-mono text-xl shadow-md">
+                        #{myQueueRank}
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-black uppercase tracking-wider text-teal-800 dark:text-cyan-300">
+                          {myQueueRank === 1 ? '🌟 You are NEXT in Queue' : 'Your Live Position in Queue'}
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5">
+                          {myQueueRank === 1 
+                            ? 'Please remain close to the triage call display. A medical provider will call your ticket momentarily.'
+                            : `There are ${Math.max(0, myQueueRank - 1)} patient(s) ahead of you in this clinical service stream.`
+                          }
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 text-right">
+                      <div className="bg-white/80 dark:bg-slate-900/80 px-3.5 py-1.5 rounded-xl border border-teal-200/80 dark:border-cyan-800/80">
+                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Queue Depth</div>
+                        <div className="text-sm font-black font-mono text-teal-900 dark:text-cyan-200">
+                          {deptWaitingPatients.length} Waiting
+                        </div>
+                      </div>
+                      <div className="bg-white/80 dark:bg-slate-900/80 px-3.5 py-1.5 rounded-xl border border-teal-200/80 dark:border-cyan-800/80">
+                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Forecast Trend</div>
+                        <div className={`text-sm font-black capitalize ${
+                          myQueueEntry.waitTrend === 'falling' ? 'text-emerald-600 dark:text-emerald-400' :
+                          myQueueEntry.waitTrend === 'rising' ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-300'
+                        }`}>
+                          {myQueueEntry.waitTrend || 'Steady'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Prominent Exam Room Banner (when assigned) */}
                 {myQueueEntry.assignedRoomName && (
@@ -814,6 +876,31 @@ export function PatientPortal({ patients = [], departments = [], onCheckInSubmit
                     )}
                   </div>
                 </div>
+
+                {/* Live Queue Position for Tracked Ticket */}
+                {deptWaitingPatients.findIndex(p => p.id === trackedPatient.id || p.displayToken === trackedPatient.displayToken) >= 0 && (
+                  <div className="bg-teal-50 dark:bg-cyan-950/40 border border-teal-200 dark:border-cyan-800/60 p-4 rounded-2xl flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center font-black font-mono text-lg shadow-sm">
+                        #{deptWaitingPatients.findIndex(p => p.id === trackedPatient.id || p.displayToken === trackedPatient.displayToken) + 1}
+                      </div>
+                      <div>
+                        <div className="text-xs font-black uppercase text-teal-800 dark:text-cyan-300">
+                          Current Queue Position
+                        </div>
+                        <div className="text-xs text-slate-600 dark:text-slate-400">
+                          {deptWaitingPatients.findIndex(p => p.id === trackedPatient.id || p.displayToken === trackedPatient.displayToken) === 0
+                            ? 'You are next in queue for exam room assignment.'
+                            : `${deptWaitingPatients.findIndex(p => p.id === trackedPatient.id || p.displayToken === trackedPatient.displayToken)} patient(s) currently ahead of you.`
+                          }
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right font-mono text-xs text-slate-500">
+                      Total Waiting: <strong className="text-slate-800 dark:text-slate-200">{deptWaitingPatients.length}</strong>
+                    </div>
+                  </div>
+                )}
 
                 {/* Exam Room Assignment */}
                 {trackedPatient.assignedRoomName && (

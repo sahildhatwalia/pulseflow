@@ -86,22 +86,12 @@ class HospitalDatabase {
 
     // 2. Seed Staff / Providers
     const initialProviders = [
-      {
-        id: 'prov-admin',
-        name: 'Jane Admin',
-        role: 'Administrator',
-        departmentId: 'dept-ed',
-        email: 'admin@mediqueue.com',
-        status: 'on_duty',
-      },
-      {
-        id: 'prov-staff',
-        name: 'John Staff, RN',
-        role: 'Clinical Provider',
-        departmentId: 'dept-ed',
-        email: 'staff@mediqueue.com',
-        status: 'on_duty',
-      }
+      { id: 'prov-admin',       name: 'Jane Admin',          role: 'Administrator',       departmentId: 'dept-ed',    email: 'admin@mediqueue.com',        status: 'on_duty' },
+      { id: 'prov-doctor',      name: 'Dr. Aisha Kapoor',    role: 'Clinical Provider',   departmentId: 'dept-ed',    email: 'doctor@mediqueue.com',       status: 'on_duty' },
+      { id: 'prov-nurse',       name: 'Marcus Chen, RN',     role: 'Charge Nurse',        departmentId: 'dept-ed',    email: 'nurse@mediqueue.com',        status: 'on_duty' },
+      { id: 'prov-reception',   name: 'Priya Sharma',        role: 'Hospital Operations', departmentId: 'dept-ed',    email: 'reception@mediqueue.com',    status: 'on_duty' },
+      { id: 'prov-supervisor',  name: 'Dr. Sam Okonkwo',     role: 'Clinical Supervisor', departmentId: 'dept-trauma',email: 'supervisor@mediqueue.com',   status: 'on_duty' },
+      { id: 'prov-staff',       name: 'John Staff, RN',      role: 'Clinical Provider',   departmentId: 'dept-uc',    email: 'staff@mediqueue.com',        status: 'on_duty' },
     ];
     initialProviders.forEach(p => this.providers.set(p.id, p));
 
@@ -562,6 +552,12 @@ class HospitalDatabase {
     return Array.from(this.patients.values()).find(
       p => p.displayToken.toUpperCase() === cleanToken
     );
+  }
+
+  getPatientByEmail(email) {
+    return Array.from(this.patients.values()).find(
+      p => p.phi?.email?.toLowerCase() === email?.toLowerCase()
+    ) || null;
   }
 
   checkInPatient(data) {

@@ -2,24 +2,44 @@ import mongoose from 'mongoose';
 import { Department, Provider, RoomBay, Patient, AuditLog } from './models/index.js';
 import { generatePatientDisplayToken, generateAuditHash } from './hipaa.js';
 import { recalculateDepartmentQueue } from './predictionEngine.js';
+import { db as memoryDb } from './db.js';
 
 class MongoDatabase {
+  constructor() {
+    this.useMemory = false;
+    this.memoryDb = memoryDb;
+  }
+
   async connect() {
+    if (process.env.USE_MEMORY_DB === 'true') {
+      this.useMemory = true;
+      console.log('💡 Running with high-performance in-memory hospital database & telemetry.');
+      return;
+    }
     try {
       const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/pulseflow';
-      await mongoose.connect(uri);
+      const connectPromise = mongoose.connect(uri, { serverSelectionTimeoutMS: 1500 });
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout')), 1500));
+      await Promise.race([connectPromise, timeoutPromise]);
+      this.useMemory = false;
       console.log('✅ Connected to MongoDB');
       
       const deptCount = await Department.countDocuments();
       const providerCount = await Provider.countDocuments();
-      // Re-seed if departments missing OR providers are fewer than expected (handles role additions)
-      if (deptCount === 0 || providerCount < 5) {
+      // Re-seed if departments missing OR providers are fewer than expected
+      if (deptCount === 0 || providerCount < 6) {
         console.log('🌱 Seeding initial MongoDB data...');
         await this.seedInitialData();
+      } else {
+        // Ensure all demo providers exist
+        for (const prov of this.memoryDb.getProviders()) {
+          await Provider.updateOne({ email: prov.email }, { $set: prov }, { upsert: true });
+        }
       }
     } catch (err) {
-      console.error('❌ MongoDB Connection Error:', err.message);
-      console.log('Ensure MongoDB is running locally on port 27017 or provide a valid MONGODB_URI in .env');
+      this.useMemory = true;
+      console.warn('⚠️ MongoDB not available (' + err.message + ').');
+      console.log('💡 Running with high-performance in-memory hospital database & telemetry.');
     }
   }
 
@@ -413,4 +433,16 @@ class MongoDatabase {
   }
 }
 
-export const db = new MongoDatabase();
+const mongoDbInstance = new MongoDatabase();
+
+export const db = new Proxy(mongoDbInstance, {
+  get(target, prop) {
+    if (prop === 'connect') return target.connect.bind(target);
+    if (target.useMemory && prop in target.memoryDb) {
+      const val = target.memoryDb[prop];
+      return typeof val === 'function' ? val.bind(target.memoryDb) : val;
+    }
+    const val = target[prop];
+    return typeof val === 'function' ? val.bind(target) : val;
+  }
+});

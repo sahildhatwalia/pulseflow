@@ -23,6 +23,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { logoutUser } from '../services/api.js';
+import { HospitalRoleSwitcher } from './HospitalRoleSwitcher.jsx';
 
 const STATUS_LABEL = {
   checked_in: 'Just Arrived',
@@ -145,12 +146,13 @@ export function ReceptionistView({
           <div className="flex items-center gap-3 text-xs">
             <span className="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300">
               <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
-              PulseFlow Reception Console
+              Hospital Queue Prediction System · Admissions Desk
             </span>
             <span className="hidden sm:inline text-slate-400 dark:text-slate-600">•</span>
             <span className="hidden sm:inline text-slate-500 dark:text-slate-400">St. Jude Metropolitan Academic Health</span>
           </div>
           <div className="flex items-center gap-2">
+            <HospitalRoleSwitcher />
             <span className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${
               socketConnected
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/60'
@@ -176,10 +178,10 @@ export function ReceptionistView({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">PulseFlow</h1>
-                <span className="text-xs bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-950 dark:text-teal-300 dark:border-teal-800 px-2 py-0.5 rounded font-mono font-semibold">Reception</span>
+                <h1 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">Hospital Queue Prediction System</h1>
+                <span className="text-xs bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-950 dark:text-teal-300 dark:border-teal-800 px-2 py-0.5 rounded font-mono font-semibold">Admissions &amp; Intake</span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Patient intake, queue management & wait times</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Emergency patient queue intake, wait time telemetry &amp; desk registry</p>
             </div>
           </div>
 
@@ -307,23 +309,42 @@ export function ReceptionistView({
                 </div>
               ) : (
                 <div className="divide-y divide-slate-100 dark:divide-slate-800/70">
-                  <div className="grid grid-cols-12 px-5 py-2 bg-slate-100/80 dark:bg-slate-950 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                    <div className="col-span-3">Ticket</div>
-                    <div className="col-span-4">Care Stage</div>
-                    <div className="col-span-3 text-right">Est. Wait</div>
-                    <div className="col-span-2 text-right">Trend</div>
+                  <div className="grid grid-cols-12 px-5 py-2.5 bg-slate-100/80 dark:bg-slate-950 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <div className="col-span-2 sm:col-span-2">Queue #</div>
+                    <div className="col-span-3 sm:col-span-2">Ticket</div>
+                    <div className="col-span-4 sm:col-span-4">Care Stage</div>
+                    <div className="col-span-2 sm:col-span-2 text-right">Est. Wait</div>
+                    <div className="col-span-1 sm:col-span-2 text-right">Trend</div>
                   </div>
                   {inWaiting.map((p, idx) => {
+                    const queueRank = idx + 1;
                     const isNext = idx === 0;
+                    const elapsedWait = Math.max(1, Math.round((new Date() - new Date(p.checkInTime)) / 60000));
                     return (
                       <div key={p.id} className={`grid grid-cols-12 px-5 py-3.5 items-center transition-colors ${
                         isNext ? 'bg-teal-50/70 dark:bg-cyan-950/20 border-l-4 border-teal-500' : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'
                       }`}>
-                        <div className="col-span-3 flex items-center gap-2">
-                          <span className="font-mono text-base font-bold text-slate-900 dark:text-white">{p.displayToken}</span>
-                          {isNext && <span className="hidden md:inline-block px-1.5 py-0.5 text-[9px] uppercase font-extrabold rounded bg-teal-100 text-teal-700 dark:bg-cyan-500/20 dark:text-cyan-300 border border-teal-300 dark:border-cyan-500/30">Next</span>}
+                        {/* Queue Rank */}
+                        <div className="col-span-2 sm:col-span-2 flex items-center gap-1.5">
+                          <span className={`inline-flex items-center justify-center font-black font-mono px-2 py-0.5 rounded text-xs ${
+                            isNext
+                              ? 'bg-teal-600 text-white shadow-xs'
+                              : queueRank <= 3
+                              ? 'bg-teal-100 text-teal-800 dark:bg-cyan-950 dark:text-cyan-300 border border-teal-200 dark:border-cyan-800'
+                              : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                          }`}>
+                            #{queueRank}
+                          </span>
+                          {isNext && <span className="hidden lg:inline-block text-[9px] uppercase font-extrabold text-teal-700 dark:text-cyan-300">Next</span>}
                         </div>
-                        <div className="col-span-4">
+
+                        {/* Ticket */}
+                        <div className="col-span-3 sm:col-span-2 flex items-center gap-2">
+                          <span className="font-mono text-base font-bold text-slate-900 dark:text-white">{p.displayToken}</span>
+                        </div>
+
+                        {/* Care Stage */}
+                        <div className="col-span-4 sm:col-span-4">
                           <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold inline-flex items-center gap-1.5 ${
                             p.status === 'in_triage' ? 'bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800/60' :
                             p.status === 'triage_completed' ? 'bg-indigo-100 text-indigo-800 border border-indigo-300 dark:bg-indigo-950 dark:text-indigo-300 dark:border-indigo-800/60' :
@@ -333,16 +354,26 @@ export function ReceptionistView({
                             <span className="w-1.5 h-1.5 rounded-full bg-current" />
                             {STATUS_LABEL[p.status] || p.status}
                           </span>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500 ml-2 hidden sm:inline">
+                            Wait: {elapsedWait}m
+                          </span>
                         </div>
-                        <div className="col-span-3 text-right font-mono text-sm font-bold text-teal-700 dark:text-cyan-400">~{p.estimatedWaitMinutes}<span className="text-xs font-sans font-normal text-slate-400 ml-0.5">min</span></div>
-                        <div className="col-span-2 text-right">
+
+                        {/* Est Wait */}
+                        <div className="col-span-2 sm:col-span-2 text-right font-mono text-sm font-bold text-teal-700 dark:text-cyan-400">
+                          ~{p.estimatedWaitMinutes}<span className="text-xs font-sans font-normal text-slate-400 ml-0.5">min</span>
+                        </div>
+
+                        {/* Trend */}
+                        <div className="col-span-1 sm:col-span-2 text-right">
                           <span className={`inline-flex items-center gap-0.5 text-xs font-semibold ${
                             p.waitTrend === 'falling' ? 'text-emerald-600 dark:text-emerald-400' :
                             p.waitTrend === 'rising' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'
                           }`}>
-                            {p.waitTrend === 'falling' && <ArrowDownRight className="w-3 h-3" />}
-                            {p.waitTrend === 'rising' && <ArrowUpRight className="w-3 h-3" />}
-                            {p.waitTrend === 'stable' && <Minus className="w-3 h-3" />}
+                            {p.waitTrend === 'falling' && <ArrowDownRight className="w-3.5 h-3.5" />}
+                            {p.waitTrend === 'rising' && <ArrowUpRight className="w-3.5 h-3.5" />}
+                            {p.waitTrend === 'stable' && <Minus className="w-3.5 h-3.5" />}
+                            <span className="hidden sm:inline capitalize ml-1">{p.waitTrend}</span>
                           </span>
                         </div>
                       </div>

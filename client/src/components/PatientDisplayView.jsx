@@ -45,6 +45,11 @@ export function PatientDisplayView({
     p => ['checked_in', 'in_triage', 'triage_completed', 'waiting_for_bed'].includes(p.status)
   ).sort((a, b) => b.calculatedPriorityScore - a.calculatedPriorityScore);
 
+  const getQueuePosition = (patientId) => {
+    const idx = inWaitingRoom.findIndex(p => p.id === patientId);
+    return idx >= 0 ? idx + 1 : null;
+  };
+
   const handleLookup = (e) => {
     e.preventDefault();
     setLookupError('');
@@ -114,16 +119,18 @@ export function PatientDisplayView({
       {/* Sub Header & Mode Navigation */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
         <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
-              {department.name} — Patient Lobby Display
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+              <span className="text-teal-700 dark:text-cyan-400">Hospital Queue Prediction System</span>
+              <span className="text-slate-400 font-normal">|</span>
+              <span>{department.name || 'Emergency Department'} Lobby Board</span>
             </h2>
             <span className="bg-teal-50 dark:bg-cyan-950 text-teal-700 dark:text-cyan-300 text-[11px] font-mono px-2 py-0.5 rounded border border-teal-200 dark:border-cyan-800/60 font-semibold">
-              HIPAA Safe Harbor Certified
+              Live Queue Forecast
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Real-time public display with privacy protection. Patient identities are de-identified via cryptographic tokens.
+            Real-time public queue intelligence and wait-time predictions with HIPAA Safe Harbor anonymized ticket tokens.
           </p>
         </div>
 
@@ -293,39 +300,55 @@ export function PatientDisplayView({
               </div>
             ) : (
               <div className="divide-y divide-slate-100 dark:divide-slate-800/80">
-                <div className="grid grid-cols-12 px-6 py-2.5 bg-slate-100/80 dark:bg-slate-950 text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                <div className="grid grid-cols-12 px-6 py-3 bg-slate-100/90 dark:bg-slate-950 text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                  <div className="col-span-2 sm:col-span-2">Queue Pos</div>
                   <div className="col-span-3 sm:col-span-2">Ticket #</div>
-                  <div className="col-span-4 sm:col-span-4">Care Stage</div>
-                  <div className="col-span-3 sm:col-span-3 text-right">Est. Wait</div>
-                  <div className="col-span-2 sm:col-span-3 text-right">Trend</div>
+                  <div className="col-span-3 sm:col-span-3">Care Stage</div>
+                  <div className="col-span-2 sm:col-span-3 text-right">Predicted Wait</div>
+                  <div className="col-span-2 sm:col-span-2 text-right">Trend</div>
                 </div>
 
                 {inWaitingRoom.map((patient, index) => {
+                  const queueRank = index + 1;
                   const isNext = index === 0;
+                  const elapsedWait = Math.max(1, Math.round((new Date() - new Date(patient.checkInTime)) / 60000));
 
                   return (
                     <div
                       key={patient.id}
                       className={`grid grid-cols-12 px-6 py-3.5 items-center transition-colors ${
                         isNext 
-                          ? 'bg-teal-50/70 hover:bg-teal-50 dark:bg-cyan-950/30 dark:hover:bg-cyan-950/40 border-l-4 border-teal-600 dark:border-cyan-500' 
+                          ? 'bg-teal-50/80 hover:bg-teal-50 dark:bg-cyan-950/40 dark:hover:bg-cyan-950/50 border-l-4 border-teal-600 dark:border-cyan-400' 
                           : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/40'
                       }`}
                     >
+                      {/* Queue Pos */}
+                      <div className="col-span-2 sm:col-span-2 flex items-center gap-1.5">
+                        <span className={`inline-flex items-center justify-center font-black font-mono px-2 py-0.5 rounded text-xs ${
+                          isNext
+                            ? 'bg-teal-600 text-white shadow-xs'
+                            : queueRank <= 3
+                            ? 'bg-teal-100 text-teal-800 dark:bg-cyan-950 dark:text-cyan-300 border border-teal-200 dark:border-cyan-800'
+                            : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                        }`}>
+                          #{queueRank}
+                        </span>
+                        {isNext && (
+                          <span className="hidden lg:inline-block text-[10px] font-bold uppercase text-teal-700 dark:text-cyan-300 tracking-wide">
+                            Next Up
+                          </span>
+                        )}
+                      </div>
+
                       {/* Ticket */}
                       <div className="col-span-3 sm:col-span-2 flex items-center gap-2">
                         <span className="font-mono text-base md:text-lg font-bold text-slate-900 dark:text-white tracking-wide">
                           {patient.displayToken}
                         </span>
-                        {isNext && (
-                          <span className="hidden md:inline-block px-2 py-0.5 text-[10px] uppercase font-bold rounded bg-teal-100 text-teal-800 dark:bg-cyan-500/20 dark:text-cyan-300 border border-teal-300 dark:border-cyan-500/40">
-                            Next
-                          </span>
-                        )}
                       </div>
 
                       {/* Current Stage */}
-                      <div className="col-span-4 sm:col-span-4">
+                      <div className="col-span-3 sm:col-span-3">
                         <span className={`px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 ${
                           patient.status === 'in_triage' ? 'bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800/60' :
                           patient.status === 'triage_completed' ? 'bg-indigo-100 text-indigo-900 border border-indigo-300 dark:bg-indigo-950 dark:text-indigo-300 dark:border-indigo-800/60' :
@@ -335,18 +358,21 @@ export function PatientDisplayView({
                           <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
                           <span className="capitalize">{patient.status.replace(/_/g, ' ')}</span>
                         </span>
+                        <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 hidden sm:block">
+                          Waiting in lobby: {elapsedWait}m
+                        </div>
                       </div>
 
                       {/* Est Wait */}
-                      <div className="col-span-3 sm:col-span-3 text-right">
-                        <span className="font-mono text-base md:text-lg font-bold text-teal-700 dark:text-cyan-400">
+                      <div className="col-span-2 sm:col-span-3 text-right">
+                        <span className="font-mono text-base md:text-lg font-black text-teal-700 dark:text-cyan-400">
                           ~{patient.estimatedWaitMinutes}
                         </span>
                         <span className="text-xs text-slate-500 dark:text-slate-400 ml-1">min</span>
                       </div>
 
                       {/* Trend */}
-                      <div className="col-span-2 sm:col-span-3 text-right">
+                      <div className="col-span-2 sm:col-span-2 text-right">
                         <span className={`inline-flex items-center gap-1 text-xs font-semibold ${
                           patient.waitTrend === 'falling' ? 'text-emerald-600 dark:text-emerald-400' :
                           patient.waitTrend === 'rising' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'
@@ -417,13 +443,33 @@ export function PatientDisplayView({
 
           {foundPatient && (
             <div className="bg-white dark:bg-slate-900 border border-teal-300 dark:border-cyan-800/60 p-6 rounded-2xl shadow-md space-y-5">
-              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
                 <div>
                   <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Personal Tracker for Ticket</span>
-                  <div className="text-2xl font-extrabold font-mono text-teal-800 dark:text-cyan-300">
+                  <div className="text-3xl font-black font-mono text-teal-800 dark:text-cyan-300">
                     {foundPatient.displayToken}
                   </div>
                 </div>
+
+                {getQueuePosition(foundPatient.id) ? (
+                  <div className="flex items-center gap-3 bg-teal-50 dark:bg-cyan-950/50 px-4 py-2 rounded-xl border border-teal-200 dark:border-cyan-800/60">
+                    <div>
+                      <div className="text-[10px] font-bold uppercase text-teal-700 dark:text-cyan-300 tracking-wider">
+                        Queue Position
+                      </div>
+                      <div className="text-xl font-black font-mono text-teal-900 dark:text-cyan-200">
+                        #{getQueuePosition(foundPatient.id)} <span className="text-xs font-normal text-slate-500">of {inWaitingRoom.length}</span>
+                      </div>
+                    </div>
+                    <div className="border-l border-teal-200 dark:border-cyan-800/80 pl-3">
+                      <div className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Ahead of You</div>
+                      <div className="text-lg font-black font-mono text-slate-800 dark:text-slate-200">
+                        {Math.max(0, getQueuePosition(foundPatient.id) - 1)}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+
                 <div className="text-right">
                   <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Predicted Wait Time</div>
                   <div className="text-2xl font-extrabold font-mono text-slate-900 dark:text-white">

@@ -11,7 +11,16 @@ import {
   Heart,
   Thermometer,
   Activity,
-  Bot
+  Bot,
+  Clock,
+  ArrowDownRight,
+  ArrowUpRight,
+  TrendingUp,
+  Zap,
+  AlertCircle,
+  Layers,
+  ArrowUpDown,
+  Sparkles,
 } from 'lucide-react';
 
 export function StaffTriageView({
@@ -24,6 +33,7 @@ export function StaffTriageView({
 }) {
   const [filterEsi, setFilterEsi] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [sortBy, setSortBy] = useState('priority');
   const [showPhiMap, setShowPhiMap] = useState({});
   const [showIntakeModal, setShowIntakeModal] = useState(false);
   const [assigningPatient, setAssigningPatient] = useState(null);
@@ -49,6 +59,16 @@ export function StaffTriageView({
   const deptRooms = rooms.filter(r => r.departmentId === department.id);
   const deptProviders = providers.filter(p => p.departmentId === department.id);
 
+  // Dedicated waiting queue order for exact position ranking
+  const waitingPatientsList = deptPatients
+    .filter(p => ['checked_in', 'in_triage', 'triage_completed', 'waiting_for_bed'].includes(p.status))
+    .sort((a, b) => b.calculatedPriorityScore - a.calculatedPriorityScore);
+
+  const getQueueRank = (patientId) => {
+    const idx = waitingPatientsList.findIndex(p => p.id === patientId);
+    return idx >= 0 ? idx + 1 : null;
+  };
+
   const filteredPatients = deptPatients.filter(p => {
     if (filterEsi !== 'all' && p.esiLevel !== Number(filterEsi)) return false;
     if (filterStatus === 'waiting' && !['checked_in', 'in_triage', 'triage_completed', 'waiting_for_bed'].includes(p.status)) return false;
@@ -58,6 +78,16 @@ export function StaffTriageView({
   }).sort((a, b) => {
     if (a.status === 'discharged' && b.status !== 'discharged') return 1;
     if (b.status === 'discharged' && a.status !== 'discharged') return -1;
+
+    if (sortBy === 'wait') {
+      return (b.estimatedWaitMinutes || 0) - (a.estimatedWaitMinutes || 0);
+    }
+    if (sortBy === 'arrival') {
+      return new Date(a.arrivalTime).getTime() - new Date(b.arrivalTime).getTime();
+    }
+    if (sortBy === 'esi') {
+      return a.esiLevel - b.esiLevel;
+    }
     return b.calculatedPriorityScore - a.calculatedPriorityScore;
   });
 
@@ -219,6 +249,61 @@ export function StaffTriageView({
         ))}
       </div>
 
+      {/* Hospital Queue Prediction System — Real-Time Telemetry Ribbon */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-white dark:bg-slate-900 border border-teal-200/80 dark:border-teal-800/60 p-4 rounded-2xl shadow-xs">
+          <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
+            <span>Live Queue Depth</span>
+            <Activity className="w-4 h-4 text-teal-600 dark:text-cyan-400" />
+          </div>
+          <div className="text-2xl font-black font-mono text-teal-700 dark:text-cyan-300 mt-1">
+            {waitingPatientsList.length} <span className="text-xs font-sans font-normal text-slate-400">waiting</span>
+          </div>
+          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+            {deptPatients.filter(p => p.status === 'in_treatment').length} in active examination bays
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-xs">
+          <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
+            <span>Predicted Door-to-Doc</span>
+            <Clock className="w-4 h-4 text-amber-500" />
+          </div>
+          <div className="text-2xl font-black font-mono text-slate-900 dark:text-white mt-1">
+            ~{department.averageWaitMinutes || 24} <span className="text-xs font-sans font-normal text-slate-400">mins</span>
+          </div>
+          <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-1 flex items-center gap-1">
+            <TrendingUp className="w-3 h-3" /> ESI Predictive Target &lt; 30m
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-xs">
+          <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
+            <span>Critical Acuity (ESI 1–2)</span>
+            <AlertCircle className="w-4 h-4 text-rose-500" />
+          </div>
+          <div className="text-2xl font-black font-mono text-rose-600 dark:text-rose-400 mt-1">
+            {waitingPatientsList.filter(p => p.esiLevel <= 2).length} <span className="text-xs font-sans font-normal text-slate-400">emergent</span>
+          </div>
+          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+            Auto-prioritized to top of queue
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-xs">
+          <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
+            <span>Exam Bay Occupancy</span>
+            <Bed className="w-4 h-4 text-teal-600 dark:text-cyan-400" />
+          </div>
+          <div className="text-2xl font-black font-mono text-slate-900 dark:text-white mt-1">
+            {department.occupiedBeds || 18}/{department.totalBeds || 24}
+          </div>
+          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+            {deptProviders.length} active clinicians on unit
+          </div>
+        </div>
+      </div>
+
       {/* Filter and Quick Stats Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-950/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800/80 shadow-2xs">
         <div className="flex items-center gap-3 flex-wrap">
@@ -243,18 +328,35 @@ export function StaffTriageView({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Show:</span>
-          <select
-            value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value)}
-            className="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white rounded-lg px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-teal-500"
-          >
-            <option value="all">All Patients ({deptPatients.length})</option>
-            <option value="waiting">Still Waiting</option>
-            <option value="in_care">With Doctor Now</option>
-            <option value="discharged">Discharged</option>
-          </select>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+            <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Sort:</span>
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value)}
+              className="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white rounded-lg px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-teal-500 font-semibold"
+            >
+              <option value="priority">Priority Score (Highest Risk First)</option>
+              <option value="wait">Predicted Wait Time (Longest First)</option>
+              <option value="arrival">Arrival Time (FIFO)</option>
+              <option value="esi">Clinical Acuity (ESI 1 ➔ 5)</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Show:</span>
+            <select
+              value={filterStatus}
+              onChange={e => setFilterStatus(e.target.value)}
+              className="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white rounded-lg px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-teal-500"
+            >
+              <option value="all">All Patients ({deptPatients.length})</option>
+              <option value="waiting">Still in Waiting Queue ({waitingPatientsList.length})</option>
+              <option value="in_care">In Care with Physician</option>
+              <option value="discharged">Discharged</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -270,6 +372,10 @@ export function StaffTriageView({
               const isOverridden = patient.isPriorityOverridden;
               const isDischarged = patient.status === 'discharged';
               const showPhi = showPhiMap[patient.id];
+              const rank = getQueueRank(patient.id);
+              const elapsedMinutes = patient.arrivalTime 
+                ? Math.max(0, Math.floor((Date.now() - new Date(patient.arrivalTime).getTime()) / 60000)) 
+                : 10;
 
               return (
                 <div
@@ -290,6 +396,19 @@ export function StaffTriageView({
                     {/* Patient Core Info */}
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-3 flex-wrap">
+                        {/* Queue Rank Badge */}
+                        {rank && !isDischarged && (
+                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-black inline-flex items-center gap-1 shadow-2xs ${
+                            rank === 1
+                              ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white animate-pulse ring-2 ring-amber-400/30'
+                              : rank <= 3
+                              ? 'bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950 dark:text-amber-300'
+                              : 'bg-teal-50 text-teal-800 border border-teal-200 dark:bg-cyan-950 dark:text-cyan-300 dark:border-cyan-800'
+                          }`}>
+                            {rank === 1 ? '⚡ #1 NEXT IN QUEUE' : `#${rank} IN QUEUE`}
+                          </span>
+                        )}
+
                         <span className="font-mono text-xl font-extrabold text-slate-900 dark:text-white tracking-wide">
                           {patient.displayToken}
                         </span>
@@ -395,11 +514,36 @@ export function StaffTriageView({
                       )}
                     </div>
 
-                    {/* Right Action Buttons */}
+                    {/* Right Queue Forecast & Action Buttons */}
                     {!isDischarged && (
-                      <div className="flex flex-wrap lg:flex-col items-end gap-2 shrink-0">
-                        <div className="text-right text-xs text-slate-500 dark:text-slate-400 mb-1 hidden lg:block">
-                          Est. Wait: <span className="font-bold text-teal-700 dark:text-cyan-400 font-mono text-sm">{patient.estimatedWaitMinutes} min</span>
+                      <div className="flex flex-wrap lg:flex-col items-end gap-2.5 shrink-0">
+                        {/* Queue Prediction Telemetry Block */}
+                        <div className="hidden lg:flex flex-col items-end bg-slate-50 dark:bg-slate-950/80 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 text-right min-w-[150px]">
+                          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold text-slate-500 dark:text-slate-400">
+                            <Clock className="w-3 h-3 text-teal-600 dark:text-cyan-400" />
+                            <span>Predicted Wait</span>
+                          </div>
+                          <div className="flex items-baseline gap-1 mt-0.5">
+                            <span className="text-xl font-black font-mono text-teal-700 dark:text-cyan-400">
+                              ~{patient.estimatedWaitMinutes ?? 15}
+                            </span>
+                            <span className="text-xs text-slate-500 font-semibold">mins</span>
+                            {patient.waitTrend === 'rising' && (
+                              <span className="inline-flex items-center text-[10px] font-bold text-rose-600 dark:text-rose-400 ml-1" title="Wait time increasing">
+                                <ArrowUpRight className="w-3.5 h-3.5" /> ↑
+                              </span>
+                            )}
+                            {patient.waitTrend === 'falling' && (
+                              <span className="inline-flex items-center text-[10px] font-bold text-emerald-600 dark:text-emerald-400 ml-1" title="Wait time decreasing">
+                                <ArrowDownRight className="w-3.5 h-3.5" /> ↓
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div className="mt-1 flex items-center justify-between w-full text-[10px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200/60 dark:border-slate-800">
+                            <span>Lobby: <strong className="text-slate-700 dark:text-slate-300 font-mono">{elapsedWait}m</strong></span>
+                            <span>Score: <strong className="text-teal-700 dark:text-cyan-400 font-mono">{patient.calculatedPriorityScore || 0}</strong></span>
+                          </div>
                         </div>
 
                         <div className="flex items-center gap-2">

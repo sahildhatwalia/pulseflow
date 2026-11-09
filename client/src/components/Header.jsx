@@ -16,6 +16,7 @@ import {
   User as UserIcon
 } from 'lucide-react';
 import { logoutUser } from '../services/api.js';
+import { HospitalRoleSwitcher } from './HospitalRoleSwitcher.jsx';
 
 export function Header({
   activeTab,
@@ -57,7 +58,7 @@ export function Header({
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300">
             <span className="inline-block w-2 h-2 rounded-full bg-teal-500 dark:bg-cyan-400 animate-pulse"></span>
-            <span>PulseFlow Clinical Queue Engine v2.4</span>
+            <span>Hospital Queue Prediction System · Telemetry Engine</span>
           </div>
           <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">•</span>
           <div className="hidden sm:flex items-center gap-1">
@@ -70,7 +71,10 @@ export function Header({
           </span>
         </div>
 
-        <div className="flex items-center gap-3 ml-auto">
+        <div className="flex items-center gap-2.5 ml-auto">
+          {/* Quick Hospital Role Switcher */}
+          <HospitalRoleSwitcher />
+
           {/* Theme Toggle Button */}
           <button
             onClick={onToggleTheme}
@@ -171,14 +175,14 @@ export function Header({
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white font-sans">
-                PulseFlow
+                Hospital Queue Prediction System
               </h1>
               <span className="text-xs bg-teal-50 text-teal-700 border border-teal-200 dark:bg-cyan-950 dark:text-cyan-300 dark:border-cyan-800/80 px-2 py-0.5 rounded font-mono font-semibold">
-                Clinical Intelligence
+                Predictive AI Engine
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Hospital Flow Intelligence & Real-Time Wait-Time Forecasting System
+              Real-Time Hospital Queue Optimization, Triage Forecasting &amp; Telemetry
             </p>
           </div>
         </div>
